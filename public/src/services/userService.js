@@ -13,3 +13,17 @@ export async function updateUserProfile({ payload, signal }) {
   });
   return res.data;
 }
+
+export async function uploadProfileImage({ file, signal }) {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const res = await apiClient.post("/users/profile/image", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+    signal,
+  });
+
+  return res.data;
+}

@@ -3,7 +3,7 @@ import * as React from "react";
 import Button from "@/components/Button";
 import { Card, CardContent, CardHeader } from "@/components/Card";
 import Input from "@/components/Input";
-import { fetchUserProfile, updateUserProfile } from "@/services/userService";
+import { fetchUserProfile, updateUserProfile, uploadProfileImage } from "@/services/userService";
 
 type Profile = {
   userId: string;
@@ -28,8 +28,12 @@ export default function Settings() {
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
   const [error, setError] = React.useState<string>("");
   const [success, setSuccess] = React.useState<string>("");
+
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string>("");
 
   const load = React.useCallback(() => {
     const controller = new AbortController();
@@ -76,11 +80,75 @@ export default function Settings() {
     setSuccess("");
   };
 
+  React.useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl("");
+      return;
+    }
+
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedFile]);
+
+  const validateImageFile = (file: File) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowed.includes(file.type)) return "Only image files are allowed (jpg, png, webp, gif)";
+    if (file.size > 2 * 1024 * 1024) return "Max file size is 2MB";
+    return "";
+  };
+
+  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError("");
+    setSuccess("");
+    const file = e.target.files?.[0] || null;
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    const message = validateImageFile(file);
+    if (message) {
+      setSelectedFile(null);
+      setError(message);
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const onUpload = async () => {
+    if (!selectedFile) return;
+    setError("");
+    setSuccess("");
+
+    setIsUploading(true);
+    try {
+      const res = await uploadProfileImage({ file: selectedFile });
+      const nextProfile = res?.profile as Profile | null;
+      const nextUrl = String(res?.profileImageUrl || nextProfile?.profileImageUrl || "");
+
+      if (nextProfile) {
+        setProfile(nextProfile);
+      }
+      if (nextUrl) {
+        setForm((prev) => ({ ...prev, profileImageUrl: nextUrl }));
+      }
+      setSelectedFile(null);
+      setSuccess("Image uploaded");
+    } catch (err: any) {
+      setError(err?.response?.data?.error?.message || err?.message || "Failed to upload image");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const onReset = () => {
     setForm({
       fullName: profile?.fullName || "",
       profileImageUrl: profile?.profileImageUrl || "",
     });
+    setSelectedFile(null);
     setError("");
     setSuccess("");
   };
@@ -143,6 +211,38 @@ export default function Settings() {
 
           {!isLoading ? (
             <form onSubmit={onSave} className="space-y-5">
+              <div className="flex items-start gap-5">
+                <div className="h-14 w-14 overflow-hidden rounded-control border border-trackify-border bg-trackify-bg">
+                  {previewUrl || profile?.profileImageUrl || form.profileImageUrl ? (
+                    <img
+                      src={previewUrl || profile?.profileImageUrl || form.profileImageUrl}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xs text-trackify-muted">
+                      —
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <div className="mb-2 text-xs text-trackify-muted">Profile image</div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={onSelectFile}
+                      className="block w-full text-sm text-trackify-muted file:mr-4 file:rounded-control file:border file:border-trackify-border file:bg-trackify-bg file:px-3 file:py-2 file:text-sm file:text-trackify-text hover:file:bg-white/5"
+                    />
+                    <Button type="button" variant="secondary" onClick={onUpload} disabled={!selectedFile || isUploading}>
+                      {isUploading ? "Uploading…" : "Upload"}
+                    </Button>
+                  </div>
+                  <div className="mt-1 text-xs text-trackify-muted">Optional • Max 2MB • JPG/PNG/WEBP/GIF</div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="mb-2 text-xs text-trackify-muted">Full name</div>
@@ -216,4 +316,3 @@ export default function Settings() {
     </div>
   );
 }
-
