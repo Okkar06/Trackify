@@ -7,6 +7,27 @@ export const apiClient = axios.create({
   timeout: 15000,
 });
 
+const SESSION_KEY = "trackify_session";
+
+export const getAccessToken = () => {
+  try {
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    if (!raw) return "";
+    const parsed = JSON.parse(raw);
+    return String(parsed?.access_token || "").trim();
+  } catch {
+    return "";
+  }
+};
+
+export const setSession = (session) => {
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session || {}));
+};
+
+export const clearSession = () => {
+  window.localStorage.removeItem(SESSION_KEY);
+};
+
 export const getMockUserId = () => {
   const stored = window.localStorage.getItem("trackify_mock_user_id");
   if (stored && stored.trim()) return stored.trim();
@@ -21,3 +42,19 @@ export const withMockUser = () => {
   };
 };
 
+apiClient.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  }
+
+  const mockUserId = getMockUserId();
+  if (mockUserId) {
+    config.headers = config.headers || {};
+    config.headers["x-user-id"] = mockUserId;
+  }
+
+  return config;
+});

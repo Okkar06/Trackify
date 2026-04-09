@@ -1,14 +1,13 @@
 const express = require('express');
 
 const { monthly, yearly } = require('../controllers/payController');
-const { requireMockUser } = require('../middleware/mockUser');
+const { requireUser } = require('../middleware/requireUser');
 
 const router = express.Router();
 
-router.use(requireMockUser);
+router.use(requireUser);
 
 router.get('/monthly', monthly);
 router.get('/yearly', yearly);
 
 module.exports = router;
-

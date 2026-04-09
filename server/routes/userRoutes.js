@@ -1,14 +1,13 @@
 const express = require('express');
 
 const { getProfile, updateProfile } = require('../controllers/userController');
-const { requireMockUser } = require('../middleware/mockUser');
+const { requireUser } = require('../middleware/requireUser');
 
 const router = express.Router();
 
-router.use(requireMockUser);
+router.use(requireUser);
 
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 
 module.exports = router;
-
