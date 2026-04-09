@@ -1,4 +1,4 @@
-const { getSupabaseClient } = require('../config/supabase');
+const { getSupabasePublicClient } = require('../config/supabase');
 const { supabaseUrl } = require('../config/env');
 
 const getSupabaseHost = () => {
@@ -10,7 +10,7 @@ const getSupabaseHost = () => {
 };
 
 const testSupabaseConnection = async () => {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabasePublicClient();
 
   const { error } = await supabase.auth.getUser('invalid');
   if (!error) return { ok: true, mode: 'auth', host: getSupabaseHost() };
@@ -24,4 +24,3 @@ const testSupabaseConnection = async () => {
 };
 
 module.exports = { testSupabaseConnection };
-
