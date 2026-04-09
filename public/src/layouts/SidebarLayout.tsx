@@ -21,12 +21,14 @@ type NavItem = {
   disabled?: boolean;
 };
 
+const showStyleGuide = import.meta.env.DEV;
+
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutGrid },
   { label: "Work", to: "/work", icon: CalendarDays },
   { label: "Pay", to: "/pay", icon: Wallet },
   { label: "Settings", to: "/settings", icon: Settings },
-  { label: "Style Guide", to: "/styleguide", icon: Palette },
+  ...(showStyleGuide ? [{ label: "Style Guide", to: "/styleguide", icon: Palette }] : []),
 ];
 
 export default function SidebarLayout() {

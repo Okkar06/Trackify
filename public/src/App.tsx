@@ -14,6 +14,8 @@ import WorkEntry from "@/pages/WorkEntry";
 import { useAuthStore } from "@/stores/authStore";
 import * as React from "react";
 
+const showStyleGuide = import.meta.env.DEV;
+
 export default function App() {
   React.useEffect(() => {
     useAuthStore.getState().hydrate();
@@ -34,7 +36,7 @@ export default function App() {
             <Route path="/work" element={<WorkEntry />} />
             <Route path="/pay" element={<PayCalculator />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/styleguide" element={<StyleGuide />} />
+            {showStyleGuide ? <Route path="/styleguide" element={<StyleGuide />} /> : null}
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>

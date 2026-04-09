@@ -11,10 +11,27 @@ const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
+const parseCorsOrigins = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return [];
+  if (text === '*') return ['*'];
+  return text
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+};
+
+const allowedOrigins = parseCorsOrigins(corsOrigin);
+
 app.use(
   cors({
-    origin: corsOrigin,
-    credentials: true,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes('*')) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error('Not allowed by CORS'));
+    },
+    credentials: !allowedOrigins.includes('*'),
   })
 );
 app.use(express.json({ limit: '2mb' }));

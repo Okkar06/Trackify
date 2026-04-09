@@ -169,7 +169,7 @@ export default function Dashboard() {
               <div>
                 <div className="text-sm font-medium text-trackify-text">Monthly overview</div>
                 <div className="mt-1 text-sm text-trackify-muted">
-                  Click a date to preview shift details (mock data)
+                  Click a date to preview shift details
                 </div>
               </div>
               <Button variant="secondary" disabled>

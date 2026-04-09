@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/$/, "");
+const defaultApiBaseUrl = import.meta.env.DEV ? "http://localhost:4000" : window.location.origin;
+const apiBaseUrl = (import.meta.env.VITE_API_URL || defaultApiBaseUrl).replace(/\/$/, "");
 
 export const apiClient = axios.create({
   baseURL: `${apiBaseUrl}/api`,
@@ -32,14 +33,6 @@ export const getMockUserId = () => {
   const stored = window.localStorage.getItem("trackify_mock_user_id");
   if (stored && stored.trim()) return stored.trim();
   return "mock-user";
-};
-
-export const withMockUser = () => {
-  return {
-    headers: {
-      "x-user-id": getMockUserId(),
-    },
-  };
 };
 
 apiClient.interceptors.request.use((config) => {

@@ -1,7 +1,7 @@
 const express = require('express');
 
 const { getProfile, updateProfile, uploadProfileImageHandler } = require('../controllers/userController');
-const { getWorkDefaults, updateWorkDefaults } = require('../controllers/workSettingsController');
+const { getWorkSettingsHandler, updateWorkSettingsHandler } = require('../controllers/workSettingsController');
 const { requireUser } = require('../middleware/requireUser');
 const { upload } = require('../middleware/uploadProfileImage');
 
@@ -13,7 +13,7 @@ router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 router.post('/profile/image', upload.single('image'), uploadProfileImageHandler);
 
-router.get('/work-settings', getWorkDefaults);
-router.put('/work-settings', updateWorkDefaults);
+router.get('/work-settings', getWorkSettingsHandler);
+router.put('/work-settings', updateWorkSettingsHandler);
 
 module.exports = router;
