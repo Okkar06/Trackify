@@ -3,7 +3,13 @@ import * as React from "react";
 import Button from "@/components/Button";
 import { Card, CardContent, CardHeader } from "@/components/Card";
 import Input from "@/components/Input";
-import { fetchUserProfile, updateUserProfile, uploadProfileImage } from "@/services/userService";
+import {
+  fetchUserProfile,
+  fetchWorkSettings,
+  updateUserProfile,
+  updateWorkSettings,
+  uploadProfileImage,
+} from "@/services/userService";
 
 type Profile = {
   userId: string;
@@ -15,6 +21,13 @@ type Profile = {
 type FormState = {
   fullName: string;
   profileImageUrl: string;
+};
+
+type WorkDefaults = {
+  defaultPayRate: string;
+  defaultWeekendPayRate: string;
+  defaultBreakTime: string;
+  defaultMealAllowance: string;
 };
 
 const getDefaults = (): FormState => ({
@@ -31,6 +44,15 @@ export default function Settings() {
   const [isUploading, setIsUploading] = React.useState(false);
   const [error, setError] = React.useState<string>("");
   const [success, setSuccess] = React.useState<string>("");
+  const [workDefaults, setWorkDefaults] = React.useState<WorkDefaults>({
+    defaultPayRate: "0",
+    defaultWeekendPayRate: "0",
+    defaultBreakTime: "1",
+    defaultMealAllowance: "0",
+  });
+  const [workSaving, setWorkSaving] = React.useState(false);
+  const [workError, setWorkError] = React.useState("");
+  const [workSuccess, setWorkSuccess] = React.useState("");
 
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string>("");
@@ -40,14 +62,29 @@ export default function Settings() {
     setIsLoading(true);
     setError("");
 
-    fetchUserProfile({ signal: controller.signal })
-      .then((res) => {
-        const nextProfile = res?.profile as Profile | null;
+    setWorkError("");
+
+    Promise.all([
+      fetchUserProfile({ signal: controller.signal }),
+      fetchWorkSettings({ signal: controller.signal }),
+    ])
+      .then(([profileRes, workRes]) => {
+        const nextProfile = profileRes?.profile as Profile | null;
         setProfile(nextProfile);
         setForm({
           fullName: nextProfile?.fullName || "",
           profileImageUrl: nextProfile?.profileImageUrl || "",
         });
+
+        const ws = workRes?.workSettings;
+        if (ws) {
+          setWorkDefaults({
+            defaultPayRate: String(ws.defaultPayRate ?? 0),
+            defaultWeekendPayRate: String(ws.defaultWeekendPayRate ?? 0),
+            defaultBreakTime: String(ws.defaultBreakTime ?? 1),
+            defaultMealAllowance: String(ws.defaultMealAllowance ?? 0),
+          });
+        }
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
@@ -72,6 +109,12 @@ export default function Settings() {
     const t = window.setTimeout(() => setSuccess(""), 2500);
     return () => window.clearTimeout(t);
   }, [success]);
+
+  React.useEffect(() => {
+    if (!workSuccess) return;
+    const t = window.setTimeout(() => setWorkSuccess(""), 2500);
+    return () => window.clearTimeout(t);
+  }, [workSuccess]);
 
   const onChange = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -151,6 +194,51 @@ export default function Settings() {
     setSelectedFile(null);
     setError("");
     setSuccess("");
+  };
+
+  const onWorkChange = (key: keyof WorkDefaults) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setWorkDefaults((prev) => ({ ...prev, [key]: value }));
+    setWorkError("");
+    setWorkSuccess("");
+  };
+
+  const onSaveWorkDefaults = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWorkError("");
+    setWorkSuccess("");
+
+    const payload = {
+      defaultPayRate: Number(workDefaults.defaultPayRate),
+      defaultWeekendPayRate: Number(workDefaults.defaultWeekendPayRate),
+      defaultBreakTime: Number(workDefaults.defaultBreakTime),
+      defaultMealAllowance: Number(workDefaults.defaultMealAllowance),
+    };
+
+    const bad = Object.values(payload).some((v) => !Number.isFinite(v) || v < 0);
+    if (bad) {
+      setWorkError("All defaults must be numbers ≥ 0");
+      return;
+    }
+
+    setWorkSaving(true);
+    try {
+      const res = await updateWorkSettings({ payload });
+      const ws = res?.workSettings;
+      if (ws) {
+        setWorkDefaults({
+          defaultPayRate: String(ws.defaultPayRate ?? 0),
+          defaultWeekendPayRate: String(ws.defaultWeekendPayRate ?? 0),
+          defaultBreakTime: String(ws.defaultBreakTime ?? 1),
+          defaultMealAllowance: String(ws.defaultMealAllowance ?? 0),
+        });
+      }
+      setWorkSuccess("Work defaults saved");
+    } catch (err: any) {
+      setWorkError(err?.response?.data?.error?.message || err?.message || "Failed to save work defaults");
+    } finally {
+      setWorkSaving(false);
+    }
   };
 
   const canSave = form.fullName.trim().length > 0 && !isSaving;
@@ -286,6 +374,87 @@ export default function Settings() {
               </div>
             </form>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div>
+            <div className="text-sm font-medium text-trackify-text">Work defaults</div>
+            <div className="mt-1 text-sm text-trackify-muted">Auto-fill new work entries</div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSaveWorkDefaults} className="space-y-5">
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <div className="mb-2 text-xs text-trackify-muted">Default pay rate</div>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={workDefaults.defaultPayRate}
+                  onChange={onWorkChange("defaultPayRate")}
+                />
+              </div>
+              <div>
+                <div className="mb-2 text-xs text-trackify-muted">Weekend pay rate</div>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={workDefaults.defaultWeekendPayRate}
+                  onChange={onWorkChange("defaultWeekendPayRate")}
+                />
+              </div>
+              <div>
+                <div className="mb-2 text-xs text-trackify-muted">Break time (hours)</div>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.25}
+                  value={workDefaults.defaultBreakTime}
+                  onChange={onWorkChange("defaultBreakTime")}
+                />
+              </div>
+              <div>
+                <div className="mb-2 text-xs text-trackify-muted">Meal allowance</div>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={workDefaults.defaultMealAllowance}
+                  onChange={onWorkChange("defaultMealAllowance")}
+                />
+              </div>
+            </div>
+
+            {workSuccess ? (
+              <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+                {workSuccess}
+              </div>
+            ) : null}
+
+            {workError ? (
+              <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+                {workError}
+              </div>
+            ) : null}
+
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={workSaving}>
+                {workSaving ? "Saving…" : "Save defaults"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => load()}
+                disabled={isLoading || workSaving}
+              >
+                Reset
+              </Button>
+            </div>
+          </form>
         </CardContent>
       </Card>
 

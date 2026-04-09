@@ -27,3 +27,17 @@ export async function uploadProfileImage({ file, signal }) {
 
   return res.data;
 }
+
+export async function fetchWorkSettings({ signal }) {
+  const res = await apiClient.get('/users/work-settings', {
+    signal,
+  });
+  return res.data;
+}
+
+export async function updateWorkSettings({ payload, signal }) {
+  const res = await apiClient.put('/users/work-settings', payload, {
+    signal,
+  });
+  return res.data;
+}

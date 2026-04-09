@@ -4,6 +4,7 @@ import Button from "@/components/Button";
 import { Card, CardContent, CardHeader } from "@/components/Card";
 import Input from "@/components/Input";
 import Textarea from "@/components/Textarea";
+import { fetchWorkSettings } from "@/services/userService";
 import {
   createWorkEntry,
   deleteWorkEntry,
@@ -131,6 +132,8 @@ export default function WorkEntry() {
   const [editingId, setEditingId] = React.useState<string>("");
   const [isSaving, setIsSaving] = React.useState(false);
 
+  const [defaultsLoaded, setDefaultsLoaded] = React.useState(false);
+
   const refreshList = React.useCallback(() => {
     const controller = new AbortController();
 
@@ -157,6 +160,34 @@ export default function WorkEntry() {
     const cleanup = refreshList();
     return cleanup;
   }, [refreshList]);
+
+  React.useEffect(() => {
+    if (defaultsLoaded) return;
+    const controller = new AbortController();
+
+    fetchWorkSettings({ signal: controller.signal })
+      .then((res) => {
+        const ws = res?.workSettings;
+        if (!ws) return;
+
+        setForm((prev) => {
+          if (editingId) return prev;
+
+          const next = { ...prev };
+          if (next.pay_rate === "") next.pay_rate = String(ws.defaultPayRate ?? "");
+          if (next.weekend_pay_rate === "0") next.weekend_pay_rate = String(ws.defaultWeekendPayRate ?? 0);
+          if (next.break_time === "1") next.break_time = String(ws.defaultBreakTime ?? 1);
+          if (next.meal_allowance === "0") next.meal_allowance = String(ws.defaultMealAllowance ?? 0);
+          return next;
+        });
+      })
+      .finally(() => {
+        if (controller.signal.aborted) return;
+        setDefaultsLoaded(true);
+      });
+
+    return () => controller.abort();
+  }, [defaultsLoaded, editingId]);
 
   const onChange = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -424,4 +455,3 @@ export default function WorkEntry() {
     </div>
   );
 }
-
