@@ -1,24 +1,40 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const { requireEnv, supabaseServiceRoleKey, supabaseUrl } = require('./env');
+const { requireEnv, supabaseAnonKey, supabaseServiceRoleKey, supabaseUrl } = require('./env');
 
-let cachedClient;
+let cachedAdminClient;
+let cachedPublicClient;
 
 const getSupabaseAdminClient = () => {
-  if (cachedClient) return cachedClient;
+  if (cachedAdminClient) return cachedAdminClient;
 
   const url = requireEnv('SUPABASE_URL', supabaseUrl);
   const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY', supabaseServiceRoleKey);
 
-  cachedClient = createClient(url, serviceRoleKey, {
+  cachedAdminClient = createClient(url, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
   });
 
-  return cachedClient;
+  return cachedAdminClient;
 };
 
-module.exports = { getSupabaseAdminClient };
+const getSupabasePublicClient = () => {
+  if (cachedPublicClient) return cachedPublicClient;
 
+  const url = requireEnv('SUPABASE_URL', supabaseUrl);
+  const anonKey = requireEnv('SUPABASE_ANON_KEY', supabaseAnonKey);
+
+  cachedPublicClient = createClient(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return cachedPublicClient;
+};
+
+module.exports = { getSupabaseAdminClient, getSupabasePublicClient };

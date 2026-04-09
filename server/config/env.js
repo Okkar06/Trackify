@@ -8,6 +8,7 @@ const port = Number(process.env.PORT) || 4000;
 const corsOrigin = asString(process.env.CORS_ORIGIN) || 'http://localhost:5173';
 
 const supabaseUrl = asString(process.env.SUPABASE_URL);
+const supabaseAnonKey = asString(process.env.SUPABASE_ANON_KEY);
 const supabaseServiceRoleKey = asString(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 const requireEnv = (name, value) => {
@@ -25,7 +26,7 @@ module.exports = {
   nodeEnv,
   port,
   requireEnv,
+  supabaseAnonKey,
   supabaseServiceRoleKey,
   supabaseUrl,
 };
-
