@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 
+require('./config/loadEnv');
+
 const { corsOrigin, nodeEnv } = require('./config/env');
 const apiRoutes = require('./routes');
 const { notFound } = require('./middleware/notFound');
@@ -25,4 +27,3 @@ app.use(notFound);
 app.use(errorHandler);
 
 module.exports = { app };
-

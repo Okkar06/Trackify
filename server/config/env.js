@@ -11,6 +11,9 @@ const supabaseUrl = asString(process.env.SUPABASE_URL);
 const supabaseAnonKey = asString(process.env.SUPABASE_ANON_KEY);
 const supabaseServiceRoleKey = asString(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+const openaiApiKey = asString(process.env.OPENAI_API_KEY);
+const openaiModel = asString(process.env.OPENAI_MODEL) || 'gpt-4o-mini';
+
 const requireEnv = (name, value) => {
   if (!asString(value)) {
     const error = new Error(`Missing required environment variable: ${name}`);
@@ -24,6 +27,8 @@ const requireEnv = (name, value) => {
 module.exports = {
   corsOrigin,
   nodeEnv,
+  openaiApiKey,
+  openaiModel,
   port,
   requireEnv,
   supabaseAnonKey,

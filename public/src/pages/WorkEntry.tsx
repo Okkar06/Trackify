@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/Card";
 import Input from "@/components/Input";
 import Textarea from "@/components/Textarea";
 import { fetchWorkSettings } from "@/services/userService";
+import { analyzeWorkImage } from "@/services/aiService";
 import {
   createWorkEntry,
   deleteWorkEntry,
@@ -39,6 +40,13 @@ type WorkEntryRow = {
   payable_hours: number | null;
   total_pay: number | null;
   notes: string | null;
+};
+
+type AiExtract = {
+  date: string;
+  start_time: string;
+  end_time: string;
+  notes: string;
 };
 
 const parseTimeToMinutes = (timeStr: string) => {
@@ -134,6 +142,12 @@ export default function WorkEntry() {
 
   const [defaultsLoaded, setDefaultsLoaded] = React.useState(false);
 
+  const [aiFile, setAiFile] = React.useState<File | null>(null);
+  const [aiPreviewUrl, setAiPreviewUrl] = React.useState<string>("");
+  const [aiExtract, setAiExtract] = React.useState<AiExtract | null>(null);
+  const [aiError, setAiError] = React.useState<string>("");
+  const [aiLoading, setAiLoading] = React.useState(false);
+
   const refreshList = React.useCallback(() => {
     const controller = new AbortController();
 
@@ -188,6 +202,75 @@ export default function WorkEntry() {
 
     return () => controller.abort();
   }, [defaultsLoaded, editingId]);
+
+  React.useEffect(() => {
+    if (!aiFile) {
+      setAiPreviewUrl("");
+      return;
+    }
+    const url = URL.createObjectURL(aiFile);
+    setAiPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [aiFile]);
+
+  const validateAiImage = (file: File) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowed.includes(file.type)) return "Only image files are allowed (jpg, png, webp, gif)";
+    if (file.size > 5 * 1024 * 1024) return "Max file size is 5MB";
+    return "";
+  };
+
+  const onSelectAiFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAiError("");
+    setAiExtract(null);
+    const file = e.target.files?.[0] || null;
+    if (!file) {
+      setAiFile(null);
+      return;
+    }
+    const message = validateAiImage(file);
+    if (message) {
+      setAiFile(null);
+      setAiError(message);
+      return;
+    }
+    setAiFile(file);
+  };
+
+  const runAi = async () => {
+    if (!aiFile) return;
+    setAiLoading(true);
+    setAiError("");
+    setAiExtract(null);
+
+    try {
+      const res = await analyzeWorkImage({ file: aiFile });
+      setAiExtract({
+        date: String(res?.date || ""),
+        start_time: String(res?.start_time || ""),
+        end_time: String(res?.end_time || ""),
+        notes: String(res?.notes || ""),
+      });
+    } catch (err: any) {
+      setAiError(err?.response?.data?.error?.message || err?.message || "AI analysis failed");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applyAiToForm = () => {
+    if (!aiExtract) return;
+    setForm((prev) => ({
+      ...prev,
+      date: aiExtract.date || prev.date,
+      start_time: aiExtract.start_time || prev.start_time,
+      end_time: aiExtract.end_time || prev.end_time,
+      notes: aiExtract.notes || prev.notes,
+    }));
+    setAiError("");
+    setAiExtract(null);
+    setAiFile(null);
+  };
 
   const onChange = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -274,6 +357,93 @@ export default function WorkEntry() {
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <div>
+            <div className="text-sm font-medium text-trackify-text">AI image analysis</div>
+            <div className="mt-1 text-sm text-trackify-muted">Upload a schedule screenshot to extract shift times</div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-start gap-5">
+              <div className="h-14 w-14 overflow-hidden rounded-control border border-trackify-border bg-trackify-bg">
+                {aiPreviewUrl ? (
+                  <img src={aiPreviewUrl} alt="Schedule" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs text-trackify-muted">—</div>
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="mb-2 text-xs text-trackify-muted">Schedule image (optional)</div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={onSelectAiFile}
+                    className="block w-full text-sm text-trackify-muted file:mr-4 file:rounded-control file:border file:border-trackify-border file:bg-trackify-bg file:px-3 file:py-2 file:text-sm file:text-trackify-text hover:file:bg-white/5"
+                  />
+                  <Button type="button" variant="secondary" onClick={runAi} disabled={!aiFile || aiLoading}>
+                    {aiLoading ? "Analyzing…" : "Analyze"}
+                  </Button>
+                </div>
+                <div className="mt-1 text-xs text-trackify-muted">Optional • Max 5MB • JPG/PNG/WEBP/GIF</div>
+              </div>
+            </div>
+
+            {aiError ? (
+              <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+                {aiError}
+              </div>
+            ) : null}
+
+            {aiExtract ? (
+              <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4">
+                <div className="text-sm font-medium text-trackify-text">Extracted values</div>
+                <div className="mt-3 grid grid-cols-3 gap-4">
+                  <div>
+                    <div className="mb-2 text-xs text-trackify-muted">Date</div>
+                    <Input value={aiExtract.date} onChange={(e) => setAiExtract({ ...aiExtract, date: e.target.value })} />
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs text-trackify-muted">Start</div>
+                    <Input
+                      value={aiExtract.start_time}
+                      onChange={(e) => setAiExtract({ ...aiExtract, start_time: e.target.value })}
+                      placeholder="HH:MM"
+                    />
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs text-trackify-muted">End</div>
+                    <Input
+                      value={aiExtract.end_time}
+                      onChange={(e) => setAiExtract({ ...aiExtract, end_time: e.target.value })}
+                      placeholder="HH:MM"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="mb-2 text-xs text-trackify-muted">Notes</div>
+                  <Textarea
+                    value={aiExtract.notes}
+                    onChange={(e) => setAiExtract({ ...aiExtract, notes: e.target.value })}
+                    placeholder="Optional notes"
+                  />
+                </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <Button type="button" onClick={applyAiToForm}>
+                    Apply to form
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setAiExtract(null)}>
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">

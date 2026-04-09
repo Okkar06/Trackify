@@ -1,6 +1,7 @@
 const express = require('express');
 
 const authRoutes = require('./authRoutes');
+const aiRoutes = require('./aiRoutes');
 const dashboardRoutes = require('./dashboardRoutes');
 const healthRoutes = require('./healthRoutes');
 const payRoutes = require('./payRoutes');
@@ -10,6 +11,7 @@ const workEntryRoutes = require('./workEntryRoutes');
 const router = express.Router();
 
 router.use('/auth', authRoutes);
+router.use('/ai', aiRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/health', healthRoutes);
 router.use('/pay', payRoutes);
