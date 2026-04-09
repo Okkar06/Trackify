@@ -6,6 +6,7 @@ import Input from "@/components/Input";
 import { fetchMonthlyPay, fetchYearlyPay } from "@/services/payService";
 import { cn } from "@/utils/cn";
 import { buildCsvWithSummary, downloadCsv } from "@/utils/exportCsv";
+import { exportMonthlyPayPdf, exportYearlyPayPdf } from "@/utils/exportPdf";
 
 type Mode = "monthly" | "yearly";
 
@@ -172,6 +173,40 @@ export default function PayCalculator() {
     downloadCsv({ filename: `trackify-pay-yearly-${year}.csv`, csv });
   };
 
+  const onExportPdf = () => {
+    if (!totals) return;
+
+    if (mode === "monthly") {
+      exportMonthlyPayPdf({
+        year,
+        month,
+        totals,
+        rows: (monthly?.breakdown || []).map((r) => ({
+          date: r.date,
+          shifts: r.shifts,
+          totalHours: r.totalHours,
+          totalPayableHours: r.totalPayableHours,
+          totalPay: r.totalPay,
+        })),
+        filename: `trackify-pay-monthly-${year}-${pad2(month)}.pdf`,
+      });
+      return;
+    }
+
+    exportYearlyPayPdf({
+      year,
+      totals,
+      rows: (yearly?.breakdown || []).map((r) => ({
+        month: r.month,
+        shifts: r.shifts,
+        totalHours: r.totalHours,
+        totalPayableHours: r.totalPayableHours,
+        totalPay: r.totalPay,
+      })),
+      filename: `trackify-pay-yearly-${year}.pdf`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -185,7 +220,10 @@ export default function PayCalculator() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={onExport} disabled={isLoading || !totals}>
-            Export
+            Export CSV
+          </Button>
+          <Button variant="secondary" onClick={onExportPdf} disabled={isLoading || !totals}>
+            Export PDF
           </Button>
           <Button variant="secondary" onClick={() => refresh()} disabled={isLoading}>
             Refresh
