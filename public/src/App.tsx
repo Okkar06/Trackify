@@ -3,6 +3,7 @@ import SidebarLayout from "@/layouts/SidebarLayout";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/NotFound";
 import PayCalculator from "@/pages/PayCalculator";
+import Settings from "@/pages/Settings";
 import StyleGuide from "@/pages/StyleGuide";
 import WorkEntry from "@/pages/WorkEntry";
 
@@ -14,6 +15,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/work" element={<WorkEntry />} />
           <Route path="/pay" element={<PayCalculator />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/styleguide" element={<StyleGuide />} />
           <Route path="*" element={<NotFound />} />
         </Route>
