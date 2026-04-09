@@ -5,6 +5,7 @@ import { cn } from "@/utils/cn";
 
 const getPageTitle = (pathname: string) => {
   if (pathname === "/") return "Dashboard";
+  if (pathname.startsWith("/work")) return "Work";
   if (pathname.startsWith("/styleguide")) return "UI Style Guide";
   return "Not Found";
 };
@@ -18,7 +19,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutGrid },
-  { label: "Work", to: "/work", icon: CalendarDays, disabled: true },
+  { label: "Work", to: "/work", icon: CalendarDays },
   { label: "Pay", to: "/pay", icon: Wallet, disabled: true },
   { label: "Settings", to: "/settings", icon: Settings, disabled: true },
   { label: "Style Guide", to: "/styleguide", icon: Palette },
@@ -97,4 +98,3 @@ export default function SidebarLayout() {
     </div>
   );
 }
-
