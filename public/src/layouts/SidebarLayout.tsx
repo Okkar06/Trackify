@@ -1,7 +1,9 @@
 import { CalendarDays, LayoutGrid, Palette, Settings, Wallet } from "lucide-react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { cn } from "@/utils/cn";
+import Button from "@/components/Button";
+import { useAuthStore } from "@/stores/authStore";
 
 const getPageTitle = (pathname: string) => {
   if (pathname === "/") return "Dashboard";
@@ -29,7 +31,14 @@ const navItems: NavItem[] = [
 
 export default function SidebarLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const logout = useAuthStore((s) => s.logout);
   const title = getPageTitle(location.pathname);
+
+  const onLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-trackify-bg">
@@ -89,7 +98,12 @@ export default function SidebarLayout() {
                 <h1 className="text-2xl font-semibold text-trackify-text">{title}</h1>
                 <p className="mt-1 text-sm text-trackify-muted">Black-and-white UI shell</p>
               </div>
-              <div className="text-sm text-trackify-muted">Actions (coming soon)</div>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-trackify-muted">Desktop</div>
+                <Button variant="secondary" onClick={onLogout}>
+                  Logout
+                </Button>
+              </div>
             </header>
             <div className="py-6">
               <Outlet />

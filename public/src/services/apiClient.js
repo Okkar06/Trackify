@@ -50,10 +50,13 @@ apiClient.interceptors.request.use((config) => {
     return config;
   }
 
-  const mockUserId = getMockUserId();
-  if (mockUserId) {
-    config.headers = config.headers || {};
-    config.headers["x-user-id"] = mockUserId;
+  const useMockUser = String(import.meta.env.VITE_USE_MOCK_USER || "").toLowerCase() === "true";
+  if (useMockUser) {
+    const mockUserId = getMockUserId();
+    if (mockUserId) {
+      config.headers = config.headers || {};
+      config.headers["x-user-id"] = mockUserId;
+    }
   }
 
   return config;

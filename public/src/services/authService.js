@@ -22,3 +22,13 @@ export async function register({ email, password, fullName, signal }) {
   return res.data;
 }
 
+export async function resetPassword({ email, signal }) {
+  const res = await apiClient.post(
+    "/auth/reset-password",
+    { email },
+    {
+      signal,
+    }
+  );
+  return res.data;
+}
