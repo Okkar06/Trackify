@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/Card";
 import Input from "@/components/Input";
 import { fetchMonthlyPay, fetchYearlyPay } from "@/services/payService";
 import { cn } from "@/utils/cn";
+import { buildCsvWithSummary, downloadCsv } from "@/utils/exportCsv";
 
 type Mode = "monthly" | "yearly";
 
@@ -122,6 +123,55 @@ export default function PayCalculator() {
   const totals = mode === "monthly" ? monthly?.totals : yearly?.totals;
   const breakdown = mode === "monthly" ? monthly?.breakdown : yearly?.breakdown;
 
+  const onExport = () => {
+    if (!totals) return;
+
+    if (mode === "monthly") {
+      const rows = (monthly?.breakdown || []).map((r) => ({
+        date: r.date,
+        total_shifts: r.shifts,
+        total_hours: r.totalHours,
+        total_payable_hours: r.totalPayableHours,
+        total_pay: r.totalPay,
+      }));
+
+      const csv = buildCsvWithSummary({
+        summary: [
+          { label: "period", value: `monthly-${year}-${pad2(month)}` },
+          { label: "total_shifts", value: totals.totalShifts },
+          { label: "total_hours", value: totals.totalHours },
+          { label: "total_payable_hours", value: totals.totalPayableHours },
+          { label: "total_pay", value: totals.totalPay },
+        ],
+        rows,
+      });
+
+      downloadCsv({ filename: `trackify-pay-monthly-${year}-${pad2(month)}.csv`, csv });
+      return;
+    }
+
+    const rows = (yearly?.breakdown || []).map((r) => ({
+      month: r.month,
+      total_shifts: r.shifts,
+      total_hours: r.totalHours,
+      total_payable_hours: r.totalPayableHours,
+      total_pay: r.totalPay,
+    }));
+
+    const csv = buildCsvWithSummary({
+      summary: [
+        { label: "period", value: `yearly-${year}` },
+        { label: "total_shifts", value: totals.totalShifts },
+        { label: "total_hours", value: totals.totalHours },
+        { label: "total_payable_hours", value: totals.totalPayableHours },
+        { label: "total_pay", value: totals.totalPay },
+      ],
+      rows,
+    });
+
+    downloadCsv({ filename: `trackify-pay-yearly-${year}.csv`, csv });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -134,7 +184,7 @@ export default function PayCalculator() {
           </ModePill>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" disabled>
+          <Button variant="secondary" onClick={onExport} disabled={isLoading || !totals}>
             Export
           </Button>
           <Button variant="secondary" onClick={() => refresh()} disabled={isLoading}>
