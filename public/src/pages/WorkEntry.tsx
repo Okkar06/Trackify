@@ -42,10 +42,19 @@ type WorkEntryRow = {
 };
 
 type AiExtract = {
-  date: string;
-  start_time: string;
-  end_time: string;
-  notes: string;
+  employee_name: string;
+  entries: Array<{
+    date: string;
+    day: string;
+    status: string;
+    shift_text: string;
+    start_time: string;
+    end_time: string;
+    total_hours: string;
+    pay_rate: string;
+    notes: string;
+  }>;
+  summary_notes: string;
 };
 
 const parseTimeToMinutes = (timeStr: string) => {
@@ -142,9 +151,19 @@ export default function WorkEntry() {
 
   const [aiFile, setAiFile] = React.useState<File | null>(null);
   const [aiPreviewUrl, setAiPreviewUrl] = React.useState<string>("");
+  const [aiEmployeeName, setAiEmployeeName] = React.useState<string>("");
   const [aiExtract, setAiExtract] = React.useState<AiExtract | null>(null);
   const [aiError, setAiError] = React.useState<string>("");
   const [aiLoading, setAiLoading] = React.useState(false);
+  const [aiCooldown, setAiCooldown] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    if (aiCooldown <= 0) return;
+    const id = window.setInterval(() => {
+      setAiCooldown((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [aiCooldown]);
 
   const refreshList = React.useCallback(() => {
     const controller = new AbortController();
@@ -247,20 +266,41 @@ export default function WorkEntry() {
 
   const runAi = async () => {
     if (!aiFile) return;
+    const targetName = aiEmployeeName.trim();
+    if (!targetName) {
+      setAiError("Employee name is required");
+      return;
+    }
+    if (aiCooldown > 0) return;
     setAiLoading(true);
     setAiError("");
     setAiExtract(null);
 
     try {
-      const res = await analyzeWorkImage({ file: aiFile });
+      const res = await analyzeWorkImage({ file: aiFile, employeeName: targetName });
+      const entries = Array.isArray(res?.entries) ? res.entries : [];
       setAiExtract({
-        date: String(res?.date || ""),
-        start_time: String(res?.start_time || ""),
-        end_time: String(res?.end_time || ""),
-        notes: String(res?.notes || ""),
+        employee_name: String(res?.employee_name || targetName),
+        entries: entries.map((e: any) => ({
+          date: String(e?.date || ""),
+          day: String(e?.day || ""),
+          status: String(e?.status || ""),
+          shift_text: String(e?.shift_text || ""),
+          start_time: String(e?.start_time || ""),
+          end_time: String(e?.end_time || ""),
+          total_hours: String(e?.total_hours || ""),
+          pay_rate: String(form.pay_rate || ""),
+          notes: String(e?.notes || ""),
+        })),
+        summary_notes: String(res?.summary_notes || ""),
       });
     } catch (err: any) {
-      setAiError(err?.response?.data?.error?.message || err?.message || "AI analysis failed");
+      const msg = err?.response?.data?.error?.message || err?.message || "AI analysis failed";
+      setAiError(msg);
+      const status = Number(err?.response?.status || 0);
+      if (status === 429 || /rate limited/i.test(String(msg))) {
+        setAiCooldown(30);
+      }
     } finally {
       setAiLoading(false);
     }
@@ -268,28 +308,29 @@ export default function WorkEntry() {
 
   const applyAiToForm = () => {
     if (!aiExtract) return;
-    if (entryMode === "multiple" && !editingId) {
-      setDraftForms((prev) => {
-        if (prev.length === 0) return prev;
-        const next = [...prev];
-        next[0] = {
-          ...next[0],
-          date: aiExtract.date || next[0].date,
-          start_time: aiExtract.start_time || next[0].start_time,
-          end_time: aiExtract.end_time || next[0].end_time,
-          notes: aiExtract.notes || next[0].notes,
-        };
-        return next;
-      });
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        date: aiExtract.date || prev.date,
-        start_time: aiExtract.start_time || prev.start_time,
-        end_time: aiExtract.end_time || prev.end_time,
-        notes: aiExtract.notes || prev.notes,
-      }));
+    if (editingId) return;
+
+    const working = (aiExtract.entries || []).filter((e) => String(e.status || "").toLowerCase() === "working");
+    if (working.length === 0) {
+      setAiError("No working entries found to apply");
+      return;
     }
+
+    setEntryMode("multiple");
+    setDraftForms(
+      working.map((e) => ({
+        ...getDefaultForm(),
+        date: e.date || "",
+        start_time: e.start_time || "",
+        end_time: e.end_time || "",
+        pay_rate: String(e.pay_rate || form.pay_rate || ""),
+        notes: [e.shift_text ? `Shift: ${e.shift_text}` : "", e.total_hours ? `Hours: ${e.total_hours}` : "", e.notes || ""]
+          .filter(Boolean)
+          .join(" • "),
+      }))
+    );
+    setDraftErrors(working.map(() => ({})));
+    setMultiSubmitError("");
     setAiError("");
     setAiExtract(null);
     setAiFile(null);
@@ -432,7 +473,7 @@ export default function WorkEntry() {
         <CardHeader>
           <div>
             <div className="text-sm font-medium text-trackify-text">AI image analysis</div>
-            <div className="mt-1 text-sm text-trackify-muted">Upload a schedule screenshot to extract shift times</div>
+            <div className="mt-1 text-sm text-trackify-muted">Upload a weekly roster screenshot to extract entries</div>
           </div>
         </CardHeader>
         <CardContent>
@@ -447,6 +488,17 @@ export default function WorkEntry() {
               </div>
               <div className="flex-1">
                 <div className="mb-2 text-xs text-trackify-muted">Schedule image (optional)</div>
+                <div className="mb-3">
+                  <div className="mb-2 text-xs text-trackify-muted">Target employee name</div>
+                  <Input
+                    value={aiEmployeeName}
+                    onChange={(e) => {
+                      setAiEmployeeName(e.target.value);
+                      setAiError("");
+                    }}
+                    placeholder="Enter employee name exactly as shown"
+                  />
+                </div>
                 <div className="flex items-center gap-3">
                   <input
                     type="file"
@@ -454,8 +506,13 @@ export default function WorkEntry() {
                     onChange={onSelectAiFile}
                     className="block w-full text-sm text-trackify-muted file:mr-4 file:rounded-control file:border file:border-trackify-border file:bg-trackify-bg file:px-3 file:py-2 file:text-sm file:text-trackify-text hover:file:bg-white/5"
                   />
-                  <Button type="button" variant="secondary" onClick={runAi} disabled={!aiFile || aiLoading}>
-                    {aiLoading ? "Analyzing…" : "Analyze"}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={runAi}
+                    disabled={!aiFile || aiLoading || !aiEmployeeName.trim() || aiCooldown > 0}
+                  >
+                    {aiLoading ? "Analyzing…" : aiCooldown > 0 ? `Try again in ${aiCooldown}s` : "Analyze"}
                   </Button>
                 </div>
                 <div className="mt-1 text-xs text-trackify-muted">Optional • Max 5MB • JPG/PNG/WEBP/GIF</div>
@@ -470,44 +527,206 @@ export default function WorkEntry() {
 
             {aiExtract ? (
               <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4">
-                <div className="text-sm font-medium text-trackify-text">Extracted values</div>
-                <div className="mt-3 grid grid-cols-3 gap-4">
+                <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="mb-2 text-xs text-trackify-muted">Date</div>
-                    <Input value={aiExtract.date} onChange={(e) => setAiExtract({ ...aiExtract, date: e.target.value })} />
+                    <div className="text-sm font-medium text-trackify-text">Extracted roster</div>
+                    <div className="mt-1 text-sm text-trackify-muted">
+                      Employee: {aiExtract.employee_name || aiEmployeeName.trim()}
+                    </div>
+                    {aiExtract.summary_notes ? (
+                      <div className="mt-1 text-xs text-trackify-muted">{aiExtract.summary_notes}</div>
+                    ) : null}
                   </div>
-                  <div>
-                    <div className="mb-2 text-xs text-trackify-muted">Start</div>
-                    <Input
-                      value={aiExtract.start_time}
-                      onChange={(e) => setAiExtract({ ...aiExtract, start_time: e.target.value })}
-                      placeholder="HH:MM"
-                    />
-                  </div>
-                  <div>
-                    <div className="mb-2 text-xs text-trackify-muted">End</div>
-                    <Input
-                      value={aiExtract.end_time}
-                      onChange={(e) => setAiExtract({ ...aiExtract, end_time: e.target.value })}
-                      placeholder="HH:MM"
-                    />
+                  <div className="flex items-center gap-2">
+                    <Button type="button" onClick={applyAiToForm} disabled={editingId !== ""}>
+                      Apply working entries
+                    </Button>
+                    <Button type="button" variant="secondary" onClick={() => setAiExtract(null)}>
+                      Dismiss
+                    </Button>
                   </div>
                 </div>
-                <div className="mt-4">
-                  <div className="mb-2 text-xs text-trackify-muted">Notes</div>
-                  <Textarea
-                    value={aiExtract.notes}
-                    onChange={(e) => setAiExtract({ ...aiExtract, notes: e.target.value })}
-                    placeholder="Optional notes"
-                  />
-                </div>
-                <div className="mt-4 flex items-center gap-3">
-                  <Button type="button" onClick={applyAiToForm}>
-                    Apply to form
-                  </Button>
-                  <Button type="button" variant="secondary" onClick={() => setAiExtract(null)}>
-                    Dismiss
-                  </Button>
+
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full border-separate border-spacing-0">
+                    <thead>
+                      <tr className="text-left text-xs text-trackify-muted">
+                        <th className="border-b border-trackify-border px-3 py-2">Date</th>
+                        <th className="border-b border-trackify-border px-3 py-2">Day</th>
+                        <th className="border-b border-trackify-border px-3 py-2">Status</th>
+                        <th className="border-b border-trackify-border px-3 py-2">Shift</th>
+                        <th className="border-b border-trackify-border px-3 py-2">Start</th>
+                        <th className="border-b border-trackify-border px-3 py-2">End</th>
+                        <th className="border-b border-trackify-border px-3 py-2">Pay rate</th>
+                        <th className="border-b border-trackify-border px-3 py-2">Hours</th>
+                        <th className="border-b border-trackify-border px-3 py-2">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {aiExtract.entries.map((row, idx) => (
+                        <tr key={idx} className="text-sm text-trackify-text">
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <Input
+                              value={row.date}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) => (i === idx ? { ...r, date: e.target.value } : r)),
+                                      }
+                                    : prev
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <Input
+                              value={row.day}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) => (i === idx ? { ...r, day: e.target.value } : r)),
+                                      }
+                                    : prev
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <select
+                              value={row.status}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) => (i === idx ? { ...r, status: e.target.value } : r)),
+                                      }
+                                    : prev
+                                )
+                              }
+                              className="h-10 w-full rounded-control border border-trackify-border bg-trackify-bg px-3 text-sm text-trackify-text"
+                            >
+                              <option value="working">working</option>
+                              <option value="no_work">no_work</option>
+                              <option value="unclear">unclear</option>
+                            </select>
+                          </td>
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <Input
+                              value={row.shift_text}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) =>
+                                          i === idx ? { ...r, shift_text: e.target.value } : r
+                                        ),
+                                      }
+                                    : prev
+                                )
+                              }
+                            />
+                          </td>
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <Input
+                              value={row.start_time}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) =>
+                                          i === idx ? { ...r, start_time: e.target.value } : r
+                                        ),
+                                      }
+                                    : prev
+                                )
+                              }
+                              placeholder="HH:MM"
+                            />
+                          </td>
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <Input
+                              value={row.end_time}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) =>
+                                          i === idx ? { ...r, end_time: e.target.value } : r
+                                        ),
+                                      }
+                                    : prev
+                                )
+                              }
+                              placeholder="HH:MM"
+                            />
+                          </td>
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={row.pay_rate}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) =>
+                                          i === idx ? { ...r, pay_rate: e.target.value } : r
+                                        ),
+                                      }
+                                    : prev
+                                )
+                              }
+                              placeholder="0"
+                            />
+                          </td>
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <Input
+                              value={row.total_hours}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) =>
+                                          i === idx ? { ...r, total_hours: e.target.value } : r
+                                        ),
+                                      }
+                                    : prev
+                                )
+                              }
+                              placeholder="9.0"
+                            />
+                          </td>
+                          <td className="border-b border-trackify-border px-3 py-2">
+                            <Input
+                              value={row.notes}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        entries: prev.entries.map((r, i) => (i === idx ? { ...r, notes: e.target.value } : r)),
+                                      }
+                                    : prev
+                                )
+                              }
+                              placeholder="Optional"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             ) : null}
