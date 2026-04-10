@@ -20,7 +20,6 @@ type FormState = {
   end_time: string;
   break_time: string;
   pay_rate: string;
-  weekend_pay_rate: string;
   meal_allowance: string;
   notes: string;
 };
@@ -66,7 +65,6 @@ const getDefaultForm = (): FormState => ({
   end_time: "",
   break_time: "1",
   pay_rate: "",
-  weekend_pay_rate: "0",
   meal_allowance: "0",
   notes: "",
 });
@@ -98,11 +96,7 @@ const validate = (form: FormState): FieldErrors => {
     }
   }
 
-  const numericFields: Array<keyof Pick<FormState, "pay_rate" | "weekend_pay_rate" | "meal_allowance">> = [
-    "pay_rate",
-    "weekend_pay_rate",
-    "meal_allowance",
-  ];
+  const numericFields: Array<keyof Pick<FormState, "pay_rate" | "meal_allowance">> = ["pay_rate", "meal_allowance"];
 
   numericFields.forEach((key) => {
     if (!form[key] && key === "pay_rate") return;
@@ -122,7 +116,6 @@ const toPayload = (form: FormState) => {
     end_time: form.end_time,
     break_time: Number(form.break_time || 1),
     pay_rate: Number(form.pay_rate),
-    weekend_pay_rate: Number(form.weekend_pay_rate || 0),
     meal_allowance: Number(form.meal_allowance || 0),
     notes: form.notes || undefined,
   };
@@ -132,6 +125,11 @@ export default function WorkEntry() {
   const [form, setForm] = React.useState<FormState>(getDefaultForm);
   const [errors, setErrors] = React.useState<FieldErrors>({});
   const [submitError, setSubmitError] = React.useState<string>("");
+
+  const [entryMode, setEntryMode] = React.useState<"single" | "multiple">("single");
+  const [draftForms, setDraftForms] = React.useState<FormState[]>([getDefaultForm()]);
+  const [draftErrors, setDraftErrors] = React.useState<FieldErrors[]>([{}]);
+  const [multiSubmitError, setMultiSubmitError] = React.useState<string>("");
 
   const [entries, setEntries] = React.useState<WorkEntryRow[]>([]);
   const [isListLoading, setIsListLoading] = React.useState(false);
@@ -189,10 +187,20 @@ export default function WorkEntry() {
 
           const next = { ...prev };
           if (next.pay_rate === "") next.pay_rate = String(ws.defaultPayRate ?? "");
-          if (next.weekend_pay_rate === "0") next.weekend_pay_rate = String(ws.defaultWeekendPayRate ?? 0);
           if (next.break_time === "1") next.break_time = String(ws.defaultBreakTime ?? 1);
           if (next.meal_allowance === "0") next.meal_allowance = String(ws.defaultMealAllowance ?? 0);
           return next;
+        });
+
+        setDraftForms((prev) => {
+          if (editingId) return prev;
+          return prev.map((row) => {
+            const next = { ...row };
+            if (next.pay_rate === "") next.pay_rate = String(ws.defaultPayRate ?? "");
+            if (next.break_time === "1") next.break_time = String(ws.defaultBreakTime ?? 1);
+            if (next.meal_allowance === "0") next.meal_allowance = String(ws.defaultMealAllowance ?? 0);
+            return next;
+          });
         });
       })
       .finally(() => {
@@ -260,13 +268,28 @@ export default function WorkEntry() {
 
   const applyAiToForm = () => {
     if (!aiExtract) return;
-    setForm((prev) => ({
-      ...prev,
-      date: aiExtract.date || prev.date,
-      start_time: aiExtract.start_time || prev.start_time,
-      end_time: aiExtract.end_time || prev.end_time,
-      notes: aiExtract.notes || prev.notes,
-    }));
+    if (entryMode === "multiple" && !editingId) {
+      setDraftForms((prev) => {
+        if (prev.length === 0) return prev;
+        const next = [...prev];
+        next[0] = {
+          ...next[0],
+          date: aiExtract.date || next[0].date,
+          start_time: aiExtract.start_time || next[0].start_time,
+          end_time: aiExtract.end_time || next[0].end_time,
+          notes: aiExtract.notes || next[0].notes,
+        };
+        return next;
+      });
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        date: aiExtract.date || prev.date,
+        start_time: aiExtract.start_time || prev.start_time,
+        end_time: aiExtract.end_time || prev.end_time,
+        notes: aiExtract.notes || prev.notes,
+      }));
+    }
     setAiError("");
     setAiExtract(null);
     setAiFile(null);
@@ -278,6 +301,13 @@ export default function WorkEntry() {
     setErrors((prev) => ({ ...prev, [key]: "" }));
   };
 
+  const onDraftChange =
+    (index: number, key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = e.target.value;
+      setDraftForms((prev) => prev.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
+      setDraftErrors((prev) => prev.map((rowErr, i) => (i === index ? { ...rowErr, [key]: "" } : rowErr)));
+    };
+
   const resetForm = () => {
     setEditingId("");
     setForm(getDefaultForm());
@@ -285,10 +315,17 @@ export default function WorkEntry() {
     setSubmitError("");
   };
 
+  const resetMulti = () => {
+    setDraftForms([getDefaultForm()]);
+    setDraftErrors([{}]);
+    setMultiSubmitError("");
+  };
+
   const startEdit = async (id: string) => {
     setSubmitError("");
     setErrors({});
     setEditingId(id);
+    setEntryMode("single");
     setIsSaving(true);
 
     try {
@@ -306,7 +343,6 @@ export default function WorkEntry() {
         end_time: entry.end_time || "",
         break_time: String(entry.break_time ?? 1),
         pay_rate: String(entry.pay_rate ?? ""),
-        weekend_pay_rate: String(entry.weekend_pay_rate ?? 0),
         meal_allowance: String(entry.meal_allowance ?? 0),
         notes: entry.notes || "",
       });
@@ -339,6 +375,41 @@ export default function WorkEntry() {
       refreshList();
     } catch (err: any) {
       setSubmitError(err?.response?.data?.error?.message || err?.message || "Failed to save work entry");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const addDraftRow = () => {
+    setDraftForms((prev) => [...prev, getDefaultForm()]);
+    setDraftErrors((prev) => [...prev, {}]);
+    setMultiSubmitError("");
+  };
+
+  const removeDraftRow = (index: number) => {
+    setDraftForms((prev) => prev.filter((_, i) => i !== index));
+    setDraftErrors((prev) => prev.filter((_, i) => i !== index));
+    setMultiSubmitError("");
+  };
+
+  const onSubmitMultiple = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMultiSubmitError("");
+
+    const nextErrors = draftForms.map((row) => validate(row));
+    setDraftErrors(nextErrors);
+    if (nextErrors.some((errs) => Object.values(errs).some(Boolean))) return;
+
+    setIsSaving(true);
+    try {
+      for (let i = 0; i < draftForms.length; i += 1) {
+        const payload = toPayload(draftForms[i]);
+        await createWorkEntry({ payload });
+      }
+      resetMulti();
+      refreshList();
+    } catch (err: any) {
+      setMultiSubmitError(err?.response?.data?.error?.message || err?.message || "Failed to create entries");
     } finally {
       setIsSaving(false);
     }
@@ -453,11 +524,160 @@ export default function WorkEntry() {
                 Add a shift and Trackify will calculate payable hours and pay
               </div>
             </div>
-            <div className="text-sm text-trackify-muted">{editingId ? "Editing" : "New entry"}</div>
+            <div className="flex items-center gap-2">
+              {!editingId ? (
+                <>
+                  <Button
+                    type="button"
+                    variant={entryMode === "single" ? "primary" : "secondary"}
+                    onClick={() => {
+                      setEntryMode("single");
+                      setSubmitError("");
+                      setErrors({});
+                    }}
+                  >
+                    Single
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={entryMode === "multiple" ? "primary" : "secondary"}
+                    onClick={() => {
+                      setEntryMode("multiple");
+                      setMultiSubmitError("");
+                    }}
+                  >
+                    Multiple
+                  </Button>
+                </>
+              ) : null}
+              <div className="text-sm text-trackify-muted">{editingId ? "Editing" : "New entry"}</div>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="space-y-5">
+          {entryMode === "multiple" && !editingId ? (
+            <form onSubmit={onSubmitMultiple} className="space-y-5">
+              <div className="space-y-4">
+                {draftForms.map((row, idx) => {
+                  const rowErrors = draftErrors[idx] || {};
+                  return (
+                    <div key={idx} className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4">
+                      <div className="mb-4 flex items-center justify-between">
+                        <div className="text-sm font-medium text-trackify-text">Entry {idx + 1}</div>
+                        {draftForms.length > 1 ? (
+                          <Button type="button" variant="secondary" onClick={() => removeDraftRow(idx)} disabled={isSaving}>
+                            Remove
+                          </Button>
+                        ) : null}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <div className="mb-2 text-xs text-trackify-muted">Date</div>
+                          <Input
+                            type="date"
+                            value={row.date}
+                            onChange={onDraftChange(idx, "date")}
+                            state={rowErrors.date ? "error" : "default"}
+                          />
+                          {rowErrors.date ? <div className="mt-1 text-xs text-trackify-muted">{rowErrors.date}</div> : null}
+                        </div>
+                        <div>
+                          <div className="mb-2 text-xs text-trackify-muted">Start time</div>
+                          <Input
+                            type="time"
+                            value={row.start_time}
+                            onChange={onDraftChange(idx, "start_time")}
+                            state={rowErrors.start_time ? "error" : "default"}
+                          />
+                          {rowErrors.start_time ? (
+                            <div className="mt-1 text-xs text-trackify-muted">{rowErrors.start_time}</div>
+                          ) : null}
+                        </div>
+                        <div>
+                          <div className="mb-2 text-xs text-trackify-muted">End time</div>
+                          <Input
+                            type="time"
+                            value={row.end_time}
+                            onChange={onDraftChange(idx, "end_time")}
+                            state={rowErrors.end_time ? "error" : "default"}
+                          />
+                          {rowErrors.end_time ? <div className="mt-1 text-xs text-trackify-muted">{rowErrors.end_time}</div> : null}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-3 gap-4">
+                        <div>
+                          <div className="mb-2 text-xs text-trackify-muted">Break time (hours)</div>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.25}
+                            value={row.break_time}
+                            onChange={onDraftChange(idx, "break_time")}
+                            state={rowErrors.break_time ? "error" : "default"}
+                          />
+                          {rowErrors.break_time ? (
+                            <div className="mt-1 text-xs text-trackify-muted">{rowErrors.break_time}</div>
+                          ) : null}
+                        </div>
+                        <div>
+                          <div className="mb-2 text-xs text-trackify-muted">Pay rate</div>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={row.pay_rate}
+                            onChange={onDraftChange(idx, "pay_rate")}
+                            state={rowErrors.pay_rate ? "error" : "default"}
+                          />
+                          {rowErrors.pay_rate ? <div className="mt-1 text-xs text-trackify-muted">{rowErrors.pay_rate}</div> : null}
+                        </div>
+                        <div>
+                          <div className="mb-2 text-xs text-trackify-muted">Meal allowance</div>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={row.meal_allowance}
+                            onChange={onDraftChange(idx, "meal_allowance")}
+                            state={rowErrors.meal_allowance ? "error" : "default"}
+                          />
+                          {rowErrors.meal_allowance ? (
+                            <div className="mt-1 text-xs text-trackify-muted">{rowErrors.meal_allowance}</div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <div className="mb-2 text-xs text-trackify-muted">Notes (optional)</div>
+                        <Input value={row.notes} onChange={onDraftChange(idx, "notes")} placeholder="Optional" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {multiSubmitError ? (
+                <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+                  {multiSubmitError}
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-3">
+                <Button type="button" variant="secondary" onClick={addDraftRow} disabled={isSaving}>
+                  Add another
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  Create entries
+                </Button>
+                <Button type="button" variant="secondary" onClick={resetMulti} disabled={isSaving}>
+                  Reset
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-5">
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="mb-2 text-xs text-trackify-muted">Date</div>
@@ -476,7 +696,7 @@ export default function WorkEntry() {
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="mb-2 text-xs text-trackify-muted">Break time (hours)</div>
                 <Input
@@ -500,20 +720,6 @@ export default function WorkEntry() {
                   state={errors.pay_rate ? "error" : "default"}
                 />
                 {errors.pay_rate ? <div className="mt-1 text-xs text-trackify-muted">{errors.pay_rate}</div> : null}
-              </div>
-              <div>
-                <div className="mb-2 text-xs text-trackify-muted">Weekend pay rate</div>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={form.weekend_pay_rate}
-                  onChange={onChange("weekend_pay_rate")}
-                  state={errors.weekend_pay_rate ? "error" : "default"}
-                />
-                {errors.weekend_pay_rate ? (
-                  <div className="mt-1 text-xs text-trackify-muted">{errors.weekend_pay_rate}</div>
-                ) : null}
               </div>
               <div>
                 <div className="mb-2 text-xs text-trackify-muted">Meal allowance</div>
@@ -551,6 +757,7 @@ export default function WorkEntry() {
               </Button>
             </div>
           </form>
+          )}
         </CardContent>
       </Card>
 

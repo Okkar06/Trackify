@@ -1,9 +1,11 @@
-import { CalendarDays, LayoutGrid, Palette, Settings, Wallet } from "lucide-react";
+import * as React from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Palette, Settings, Wallet } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { cn } from "@/utils/cn";
 import Button from "@/components/Button";
 import { useAuthStore } from "@/stores/authStore";
+import trackifyLogo from "@/assets/Trackify logo.jpg";
 
 const getPageTitle = (pathname: string) => {
   if (pathname === "/") return "Dashboard";
@@ -22,6 +24,15 @@ type NavItem = {
 };
 
 const showStyleGuide = import.meta.env.DEV;
+const SIDEBAR_COLLAPSED_KEY = "trackify_sidebar_collapsed";
+
+const getInitialCollapsed = () => {
+  try {
+    return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
 
 const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutGrid },
@@ -36,20 +47,50 @@ export default function SidebarLayout() {
   const navigate = useNavigate();
   const logout = useAuthStore((s) => s.logout);
   const title = getPageTitle(location.pathname);
+  const [isCollapsed, setIsCollapsed] = React.useState(getInitialCollapsed);
 
   const onLogout = () => {
     logout();
     navigate("/login", { replace: true });
   };
 
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(isCollapsed));
+    } catch {}
+  }, [isCollapsed]);
+
   return (
     <div className="min-h-screen bg-trackify-bg">
-      <div className="grid min-h-screen grid-cols-[280px_1fr]">
+      <div className={cn("grid min-h-screen", isCollapsed ? "grid-cols-[88px_1fr]" : "grid-cols-[280px_1fr]")}>
         <aside className="border-r border-trackify-border bg-trackify-surface">
           <div className="flex h-full flex-col">
             <div className="px-6 py-6">
-              <div className="text-base font-semibold tracking-wide text-trackify-text">Trackify</div>
-              <div className="mt-1 text-xs text-trackify-muted">Work & pay tracking</div>
+              <div className={cn("flex items-center justify-between", isCollapsed ? "gap-0" : "gap-3")}>
+                <img
+                  src={trackifyLogo}
+                  alt="Trackify"
+                  className={cn(
+                    "rounded-control border border-trackify-border object-cover grayscale",
+                    isCollapsed ? "h-10 w-10" : "h-9 w-9"
+                  )}
+                />
+                {!isCollapsed ? (
+                  <div className="flex-1">
+                    <div className="text-base font-semibold tracking-wide text-trackify-text">Trackify</div>
+                    <div className="mt-1 text-xs text-trackify-muted">Work & pay tracking</div>
+                  </div>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsCollapsed((v) => !v)}
+                  className={cn("h-9 w-9 px-0", isCollapsed ? "" : "")}
+                  title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
             <nav className="flex-1 px-3">
               <div className="space-y-1">
@@ -59,10 +100,14 @@ export default function SidebarLayout() {
                     return (
                       <div
                         key={item.label}
-                        className="flex items-center gap-3 rounded-control px-3 py-2 text-sm text-trackify-muted opacity-60"
+                        className={cn(
+                          "flex items-center rounded-control px-3 py-2 text-sm text-trackify-muted opacity-60",
+                          isCollapsed ? "justify-center" : "gap-3"
+                        )}
+                        title={item.label}
                       >
                         <Icon className="h-4 w-4" />
-                        <span>{item.label}</span>
+                        {!isCollapsed ? <span>{item.label}</span> : null}
                       </div>
                     );
                   }
@@ -71,9 +116,11 @@ export default function SidebarLayout() {
                     <NavLink
                       key={item.to}
                       to={item.to}
+                      title={item.label}
                       className={({ isActive }) =>
                         cn(
-                          "flex items-center gap-3 rounded-control px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-muted focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-surface",
+                          "flex items-center rounded-control px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-muted focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-surface",
+                          isCollapsed ? "justify-center" : "gap-3",
                           "hover:bg-white/5",
                           isActive
                             ? "border border-trackify-border bg-white/5 text-trackify-text"
@@ -83,13 +130,17 @@ export default function SidebarLayout() {
                       end={item.to === "/"}
                     >
                       <Icon className="h-4 w-4" />
-                      <span>{item.label}</span>
+                      {!isCollapsed ? <span>{item.label}</span> : null}
                     </NavLink>
                   );
                 })}
               </div>
             </nav>
-            <div className="px-6 py-5 text-xs text-trackify-muted">Desktop foundation</div>
+            {!isCollapsed ? (
+              <div className="px-6 py-5 text-xs text-trackify-muted">Desktop foundation</div>
+            ) : (
+              <div className="px-3 py-5 text-xs text-trackify-muted"> </div>
+            )}
           </div>
         </aside>
 

@@ -16,7 +16,13 @@ const getSupabasePublicClient = () => {
   if (cachedPublicClient) return cachedPublicClient;
 
   const url = requireEnv('SUPABASE_URL', supabaseUrl);
-  const anonKey = requireEnv('SUPABASE_ANON_KEY', supabaseAnonKey);
+  const anonKey = requireEnv(
+    'SUPABASE_ANON_KEY',
+    supabaseAnonKey ||
+      String(process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY || '').trim() ||
+      String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim() ||
+      String(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || '').trim()
+  );
 
   cachedPublicClient = createClient(url, anonKey, commonOptions);
   return cachedPublicClient;
