@@ -42,15 +42,13 @@ app.use(morgan(nodeEnv === 'production' ? 'combined' : 'dev'));
 
 app.use('/api', apiRoutes);
 
-if (nodeEnv === 'production') {
-  const webDistPath = path.resolve(__dirname, '../public/dist');
-  if (fs.existsSync(webDistPath)) {
-    app.use(express.static(webDistPath));
-    app.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api')) return next();
-      return res.sendFile(path.join(webDistPath, 'index.html'));
-    });
-  }
+const webDistPath = path.resolve(__dirname, '../public/dist');
+if (fs.existsSync(webDistPath)) {
+  app.use(express.static(webDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    return res.sendFile(path.join(webDistPath, 'index.html'));
+  });
 }
 
 app.use(notFound);
