@@ -1,0 +1,104 @@
+import * as React from "react";
+import { Calendar } from "lucide-react";
+
+import CalendarMonth from "@/components/CalendarMonth";
+import Button from "@/components/Button";
+import { cn } from "@/utils/cn";
+
+type DatePickerModalProps = {
+  open: boolean;
+  value: string;
+  onChange: (next: string) => void;
+  onClose: () => void;
+  title?: string;
+};
+
+const getTodayMonthYear = () => {
+  const now = new Date();
+  return { month: now.getMonth() + 1, year: now.getFullYear() };
+};
+
+const getMonthYearFromIso = (iso: string) => {
+  if (!iso) return getTodayMonthYear();
+  const date = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return getTodayMonthYear();
+  return { month: date.getUTCMonth() + 1, year: date.getUTCFullYear() };
+};
+
+export default function DatePickerModal({ open, value, onChange, onClose, title }: DatePickerModalProps) {
+  const [isMounted, setIsMounted] = React.useState(open);
+  const [{ month, year }, setMonthYear] = React.useState(() => getMonthYearFromIso(value));
+
+  React.useEffect(() => {
+    if (open) {
+      setIsMounted(true);
+      setMonthYear(getMonthYearFromIso(value));
+      return;
+    }
+    const t = window.setTimeout(() => setIsMounted(false), 160);
+    return () => window.clearTimeout(t);
+  }, [open, value]);
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (!open) return;
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!isMounted) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className={cn(
+          "absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-150",
+          open ? "opacity-100" : "opacity-0"
+        )}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className={cn(
+          "relative w-full max-w-lg overflow-hidden rounded-[20px] border border-white/10 bg-[#0A0F1A]/80 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_80px_rgba(0,0,0,0.65)] backdrop-blur-xl transition-all duration-150",
+          open ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-control border border-white/10 bg-white/5">
+              <Calendar className="h-5 w-5 text-sky-200" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-white">{title || "Select date"}</div>
+              <div className="mt-1 text-xs text-white/60">Tap a day to apply</div>
+            </div>
+          </div>
+          <Button variant="secondary" onClick={onClose} type="button" className="h-9">
+            Done
+          </Button>
+        </div>
+
+        <div className="p-5">
+          <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+            <CalendarMonth
+              month={month}
+              year={year}
+              selectedDate={value}
+              onSelectDate={(iso) => {
+                onChange(iso);
+                onClose();
+              }}
+              onMonthChange={(next) => setMonthYear(next)}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

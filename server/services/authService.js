@@ -3,26 +3,38 @@ const { supabaseServiceRoleKey } = require('../config/env');
 const { HttpError } = require('../utils/httpError');
 
 const registerUser = async ({ email, password, fullName }) => {
-  const supabase = getSupabasePublicClient();
+  const hasServiceRole = Boolean(String(supabaseServiceRoleKey || '').trim());
+  if (!hasServiceRole) {
+    throw new HttpError('Server misconfigured: missing SUPABASE_SERVICE_ROLE_KEY', 500);
+  }
 
-  const { data, error } = await supabase.auth.signUp({
+  const admin = getSupabaseAdminClient();
+
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: {
-        full_name: fullName,
-      },
+    email_confirm: true,
+    user_metadata: {
+      full_name: fullName,
     },
   });
 
-  if (error) throw new HttpError(error.message, 400);
+  if (createError) throw new HttpError(createError.message, 400);
 
-  const user = data.user;
+  const user = created?.user;
   if (user) {
     await upsertUserProfileIfPossible({ userId: user.id, email, fullName });
   }
 
-  return { user: data.user, session: data.session };
+  const supabase = getSupabasePublicClient();
+  const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (loginError) throw new HttpError(loginError.message, 500);
+
+  return { user: loginData.user, session: loginData.session };
 };
 
 const loginUser = async ({ email, password }) => {
@@ -85,4 +97,3 @@ module.exports = {
   registerUser,
   resetPassword,
 };
-

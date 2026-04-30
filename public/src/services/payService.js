@@ -1,8 +1,8 @@
 import { apiClient } from "@/services/apiClient";
 
-export async function fetchMonthlyPay({ month, year, signal }) {
+export async function fetchMonthlyPay({ startDate, endDate, signal }) {
   const res = await apiClient.get("/pay/monthly", {
-    params: { month, year },
+    params: { startDate, endDate },
     signal,
   });
   return res.data;

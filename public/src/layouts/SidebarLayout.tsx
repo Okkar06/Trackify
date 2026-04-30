@@ -5,6 +5,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/utils/cn";
 import Button from "@/components/Button";
 import { useAuthStore } from "@/stores/authStore";
+import { fetchUserProfile } from "@/services/userService";
 import trackifyLogo from "@/assets/Trackify logo.jpg";
 
 const getPageTitle = (pathname: string) => {
@@ -48,6 +49,7 @@ export default function SidebarLayout() {
   const logout = useAuthStore((s) => s.logout);
   const title = getPageTitle(location.pathname);
   const [isCollapsed, setIsCollapsed] = React.useState(getInitialCollapsed);
+  const [displayName, setDisplayName] = React.useState<string>("");
 
   const onLogout = () => {
     logout();
@@ -60,10 +62,21 @@ export default function SidebarLayout() {
     } catch {}
   }, [isCollapsed]);
 
+  React.useEffect(() => {
+    const controller = new AbortController();
+    fetchUserProfile({ signal: controller.signal })
+      .then((res: any) => {
+        const name = String(res?.profile?.fullName || res?.profile?.email || "").trim();
+        if (name) setDisplayName(name);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
   return (
     <div className="min-h-screen bg-trackify-bg">
       <div className={cn("grid min-h-screen", isCollapsed ? "grid-cols-[88px_1fr]" : "grid-cols-[280px_1fr]")}>
-        <aside className="border-r border-trackify-border bg-trackify-surface">
+        <aside className="sticky top-0 h-screen border-r border-trackify-border bg-trackify-surface">
           <div className="flex h-full flex-col">
             <div className="px-6 py-6">
               <div className={cn("flex items-center justify-between", isCollapsed ? "gap-0" : "gap-3")}>
@@ -92,7 +105,7 @@ export default function SidebarLayout() {
                 </Button>
               </div>
             </div>
-            <nav className="flex-1 px-3">
+            <nav className="flex-1 overflow-y-auto px-3">
               <div className="space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
@@ -137,7 +150,7 @@ export default function SidebarLayout() {
               </div>
             </nav>
             {!isCollapsed ? (
-              <div className="px-6 py-5 text-xs text-trackify-muted">Desktop foundation</div>
+              <div className="px-6 py-5 text-xs text-trackify-muted">{displayName || " "}</div>
             ) : (
               <div className="px-3 py-5 text-xs text-trackify-muted"> </div>
             )}
@@ -146,13 +159,13 @@ export default function SidebarLayout() {
 
         <main className="min-h-screen">
           <div className="container">
-            <header className="flex items-center justify-between border-b border-trackify-border py-6">
+            <header className="sticky top-0 z-10 flex items-center justify-between border-b border-trackify-border bg-trackify-bg py-6">
               <div>
                 <h1 className="text-2xl font-semibold text-trackify-text">{title}</h1>
                 <p className="mt-1 text-sm text-trackify-muted">Black-and-white UI shell</p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="text-sm text-trackify-muted">Desktop</div>
+                <div className="text-sm text-trackify-muted">{displayName || "Account"}</div>
                 <Button variant="secondary" onClick={onLogout}>
                   Logout
                 </Button>

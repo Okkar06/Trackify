@@ -62,3 +62,17 @@ for delete
 to authenticated
 using (user_id = auth.uid());
 
+create table if not exists public.public_holidays (
+  date date primary key,
+  name text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.public_holidays enable row level security;
+
+drop policy if exists public_holidays_select_authenticated on public.public_holidays;
+create policy public_holidays_select_authenticated
+on public.public_holidays
+for select
+to authenticated
+using (true);

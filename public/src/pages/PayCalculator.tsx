@@ -43,11 +43,29 @@ type YearlyResponse = {
   breakdown: YearlyBreakdownRow[];
 };
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
+const formatRate = (totalPay: number, totalPayableHours: number) => {
+  const pay = Number(totalPay);
+  const hours = Number(totalPayableHours);
+  if (!Number.isFinite(pay) || !Number.isFinite(hours) || hours <= 0) return "—";
+  return (pay / hours).toFixed(2);
+};
 
 const getDefaultMonthYear = () => {
   const now = new Date();
   return { month: now.getMonth() + 1, year: now.getFullYear() };
+};
+
+const formatIsoDate = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const getDefaultDateRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { startDate: formatIsoDate(start), endDate: formatIsoDate(now) };
 };
 
 const ModePill = ({
@@ -78,10 +96,12 @@ const ModePill = ({
 
 export default function PayCalculator() {
   const defaults = React.useMemo(() => getDefaultMonthYear(), []);
+  const dateDefaults = React.useMemo(() => getDefaultDateRange(), []);
 
   const [mode, setMode] = React.useState<Mode>("monthly");
-  const [month, setMonth] = React.useState(defaults.month);
   const [year, setYear] = React.useState(defaults.year);
+  const [startDate, setStartDate] = React.useState(dateDefaults.startDate);
+  const [endDate, setEndDate] = React.useState(dateDefaults.endDate);
 
   const [monthly, setMonthly] = React.useState<MonthlyResponse | null>(null);
   const [yearly, setYearly] = React.useState<YearlyResponse | null>(null);
@@ -96,7 +116,7 @@ export default function PayCalculator() {
 
     const task =
       mode === "monthly"
-        ? fetchMonthlyPay({ month, year, signal: controller.signal }).then((res) => {
+        ? fetchMonthlyPay({ startDate, endDate, signal: controller.signal }).then((res) => {
             setMonthly(res);
           })
         : fetchYearlyPay({ year, signal: controller.signal }).then((res) => {
@@ -114,7 +134,7 @@ export default function PayCalculator() {
       });
 
     return () => controller.abort();
-  }, [mode, month, year]);
+  }, [mode, year, startDate, endDate]);
 
   React.useEffect(() => {
     const cleanup = refresh();
@@ -138,7 +158,7 @@ export default function PayCalculator() {
 
       const csv = buildCsvWithSummary({
         summary: [
-          { label: "period", value: `monthly-${year}-${pad2(month)}` },
+          { label: "period", value: `range-${startDate}-to-${endDate}` },
           { label: "total_shifts", value: totals.totalShifts },
           { label: "total_hours", value: totals.totalHours },
           { label: "total_payable_hours", value: totals.totalPayableHours },
@@ -147,7 +167,7 @@ export default function PayCalculator() {
         rows,
       });
 
-      downloadCsv({ filename: `trackify-pay-monthly-${year}-${pad2(month)}.csv`, csv });
+      downloadCsv({ filename: `trackify-pay-${startDate}-to-${endDate}.csv`, csv });
       return;
     }
 
@@ -178,8 +198,9 @@ export default function PayCalculator() {
 
     if (mode === "monthly") {
       exportMonthlyPayPdf({
-        year,
-        month,
+        year: Number(startDate.slice(0, 4)) || year,
+        month: Number(startDate.slice(5, 7)) || 1,
+        subtitle: `Range • ${startDate} to ${endDate}`,
         totals,
         rows: (monthly?.breakdown || []).map((r) => ({
           date: r.date,
@@ -188,7 +209,7 @@ export default function PayCalculator() {
           totalPayableHours: r.totalPayableHours,
           totalPay: r.totalPay,
         })),
-        filename: `trackify-pay-monthly-${year}-${pad2(month)}.pdf`,
+        filename: `trackify-pay-${startDate}-to-${endDate}.pdf`,
       });
       return;
     }
@@ -237,11 +258,11 @@ export default function PayCalculator() {
             <div>
               <div className="text-sm font-medium text-trackify-text">Filters</div>
               <div className="mt-1 text-sm text-trackify-muted">
-                {mode === "monthly" ? "Monthly pay summary" : "Yearly pay summary"}
+                {mode === "monthly" ? "Pay summary (date range)" : "Yearly pay summary"}
               </div>
             </div>
             <div className="text-sm text-trackify-muted">
-              {mode === "monthly" ? `${year}-${pad2(month)}` : String(year)}
+              {mode === "monthly" ? `${startDate} → ${endDate}` : String(year)}
             </div>
           </div>
         </CardHeader>
@@ -249,26 +270,27 @@ export default function PayCalculator() {
           <div className={cn("grid gap-4", mode === "monthly" ? "grid-cols-2" : "grid-cols-1")}>
             {mode === "monthly" ? (
               <div>
-                <div className="mb-2 text-xs text-trackify-muted">Month (1–12)</div>
-                <Input
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={month}
-                  onChange={(e) => setMonth(Number(e.target.value || defaults.month))}
-                />
+                <div className="mb-2 text-xs text-trackify-muted">Start date</div>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
             ) : null}
-            <div>
-              <div className="mb-2 text-xs text-trackify-muted">Year</div>
-              <Input
-                type="number"
-                min={1970}
-                max={2100}
-                value={year}
-                onChange={(e) => setYear(Number(e.target.value || defaults.year))}
-              />
-            </div>
+            {mode === "monthly" ? (
+              <div>
+                <div className="mb-2 text-xs text-trackify-muted">End date</div>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+            ) : (
+              <div>
+                <div className="mb-2 text-xs text-trackify-muted">Year</div>
+                <Input
+                  type="number"
+                  min={1970}
+                  max={2100}
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value || defaults.year))}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -340,22 +362,26 @@ export default function PayCalculator() {
 
           {breakdown && breakdown.length > 0 ? (
             <div className="overflow-hidden rounded-control border border-trackify-border">
-              <div className="grid grid-cols-[160px_90px_120px_140px_140px] gap-0 border-b border-trackify-border bg-trackify-bg px-4 py-3 text-xs font-medium text-trackify-muted">
+              <div className="grid grid-cols-[minmax(160px,1fr)_90px_120px_140px_110px_140px] gap-0 border-b border-trackify-border bg-trackify-bg px-4 py-3 text-xs font-medium tabular-nums text-trackify-muted">
                 <div>{mode === "monthly" ? "Date" : "Month"}</div>
                 <div className="text-right">Shifts</div>
                 <div className="text-right">Hours</div>
                 <div className="text-right">Payable</div>
+                <div className="text-right">Rate</div>
                 <div className="text-right">Pay</div>
               </div>
               {breakdown.map((row: any) => (
                 <div
                   key={row.date || row.month}
-                  className="grid grid-cols-[160px_90px_120px_140px_140px] items-center gap-0 border-b border-trackify-border px-4 py-3 text-sm last:border-b-0"
+                  className="grid grid-cols-[minmax(160px,1fr)_90px_120px_140px_110px_140px] items-center gap-0 border-b border-trackify-border px-4 py-3 text-sm tabular-nums last:border-b-0"
                 >
                   <div className="text-trackify-text">{row.date || row.month}</div>
                   <div className="text-right text-trackify-muted">{row.shifts}</div>
                   <div className="text-right text-trackify-muted">{row.totalHours}</div>
                   <div className="text-right text-trackify-muted">{row.totalPayableHours}</div>
+                  <div className="text-right text-trackify-muted">
+                    {formatRate(row.totalPay, row.totalPayableHours)}
+                  </div>
                   <div className="text-right text-trackify-muted">{row.totalPay}</div>
                 </div>
               ))}

@@ -2,8 +2,8 @@ const { asyncHandler } = require('../utils/asyncHandler');
 const { getMonthlyPay, getYearlyPay, parseMonthlyQuery, parseYearlyQuery } = require('../services/payService');
 
 const monthly = asyncHandler(async (req, res) => {
-  const { month, year } = parseMonthlyQuery(req.query);
-  const data = await getMonthlyPay({ userId: req.userId, month, year });
+  const { month, year, range, startDate, endDate } = parseMonthlyQuery(req.query);
+  const data = await getMonthlyPay({ userId: req.userId, month, year, range, startDate, endDate });
   res.status(200).json(data);
 });
 
@@ -17,4 +17,3 @@ module.exports = {
   monthly,
   yearly,
 };
-

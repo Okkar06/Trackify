@@ -73,18 +73,24 @@ const addTotals = ({ doc, totals }: { doc: jsPDF; totals: Totals }) => {
 export const exportMonthlyPayPdf = ({
   year,
   month,
+  subtitle,
   totals,
   rows,
   filename,
 }: {
   year: number;
   month: number;
+  subtitle?: string;
   totals: Totals;
   rows: MonthlyRow[];
   filename: string;
 }) => {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  addHeader({ doc, title: "Trackify Pay Report", subtitle: `Monthly • ${year}-${String(month).padStart(2, "0")}` });
+  addHeader({
+    doc,
+    title: "Trackify Pay Report",
+    subtitle: subtitle || `Monthly • ${year}-${String(month).padStart(2, "0")}`,
+  });
   addTotals({ doc, totals });
 
   const startY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 8 : 60;
@@ -149,4 +155,3 @@ export const exportYearlyPayPdf = ({
 
   doc.save(filename);
 };
-

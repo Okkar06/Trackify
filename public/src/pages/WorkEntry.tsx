@@ -4,6 +4,8 @@ import Button from "@/components/Button";
 import { Card, CardContent, CardHeader } from "@/components/Card";
 import Input from "@/components/Input";
 import Textarea from "@/components/Textarea";
+import WorkEntryForm from "@/components/WorkEntryForm";
+import WorkEntryDraftCard from "@/components/WorkEntryDraftCard";
 import { fetchWorkSettings } from "@/services/userService";
 import { analyzeWorkImage } from "@/services/aiService";
 import {
@@ -68,13 +70,23 @@ const parseTimeToMinutes = (timeStr: string) => {
   return hours * 60 + minutes;
 };
 
+const isWeekendDate = (dateStr: string) => {
+  if (!dateStr) return false;
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return false;
+  const day = date.getUTCDay();
+  return day === 0 || day === 6;
+};
+
+const getAutoPayRate = (dateStr: string) => (isWeekendDate(dateStr) ? "15" : "13");
+
 const getDefaultForm = (): FormState => ({
   date: "",
   start_time: "",
   end_time: "",
   break_time: "1",
   pay_rate: "",
-  meal_allowance: "0",
+  meal_allowance: "4.5",
   notes: "",
 });
 
@@ -84,7 +96,6 @@ const validate = (form: FormState): FieldErrors => {
   if (!form.date) errors.date = "Date is required";
   if (!form.start_time) errors.start_time = "Start time is required";
   if (!form.end_time) errors.end_time = "End time is required";
-  if (!form.pay_rate) errors.pay_rate = "Pay rate is required";
 
   if (form.start_time && form.end_time) {
     const start = parseTimeToMinutes(form.start_time);
@@ -119,13 +130,15 @@ const validate = (form: FormState): FieldErrors => {
 };
 
 const toPayload = (form: FormState) => {
+  const breakHours = Number(form.break_time || 1);
+  const includeMeal = Number.isFinite(breakHours) && breakHours > 0;
   return {
     date: form.date,
     start_time: form.start_time,
     end_time: form.end_time,
     break_time: Number(form.break_time || 1),
-    pay_rate: Number(form.pay_rate),
-    meal_allowance: Number(form.meal_allowance || 0),
+    ...(String(form.pay_rate || "").trim() ? { pay_rate: Number(form.pay_rate) } : {}),
+    ...(includeMeal ? { meal_allowance: Number(form.meal_allowance || 4.5) } : {}),
     notes: form.notes || undefined,
   };
 };
@@ -205,9 +218,13 @@ export default function WorkEntry() {
           if (editingId) return prev;
 
           const next = { ...prev };
-          if (next.pay_rate === "") next.pay_rate = String(ws.defaultPayRate ?? "");
           if (next.break_time === "1") next.break_time = String(ws.defaultBreakTime ?? 1);
-          if (next.meal_allowance === "0") next.meal_allowance = String(ws.defaultMealAllowance ?? 0);
+          const breakHours = Number(next.break_time || 1);
+          if (Number.isFinite(breakHours) && breakHours <= 0) {
+            next.meal_allowance = "0";
+          } else if (next.meal_allowance === "" || next.meal_allowance === "0") {
+            next.meal_allowance = "4.5";
+          }
           return next;
         });
 
@@ -215,9 +232,13 @@ export default function WorkEntry() {
           if (editingId) return prev;
           return prev.map((row) => {
             const next = { ...row };
-            if (next.pay_rate === "") next.pay_rate = String(ws.defaultPayRate ?? "");
             if (next.break_time === "1") next.break_time = String(ws.defaultBreakTime ?? 1);
-            if (next.meal_allowance === "0") next.meal_allowance = String(ws.defaultMealAllowance ?? 0);
+            const breakHours = Number(next.break_time || 1);
+            if (Number.isFinite(breakHours) && breakHours <= 0) {
+              next.meal_allowance = "0";
+            } else if (next.meal_allowance === "" || next.meal_allowance === "0") {
+              next.meal_allowance = "4.5";
+            }
             return next;
           });
         });
@@ -323,7 +344,7 @@ export default function WorkEntry() {
         date: e.date || "",
         start_time: e.start_time || "",
         end_time: e.end_time || "",
-        pay_rate: String(e.pay_rate || form.pay_rate || ""),
+        pay_rate: "",
         notes: [e.shift_text ? `Shift: ${e.shift_text}` : "", e.total_hours ? `Hours: ${e.total_hours}` : "", e.notes || ""]
           .filter(Boolean)
           .join(" • "),
@@ -338,14 +359,41 @@ export default function WorkEntry() {
 
   const onChange = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = e.target.value;
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "date" && !String(prev.pay_rate || "").trim()) next.pay_rate = getAutoPayRate(value);
+      if (key === "break_time") {
+        const breakHours = Number(value);
+        if (Number.isFinite(breakHours) && breakHours <= 0) {
+          next.meal_allowance = "0";
+        } else if (next.meal_allowance === "" || next.meal_allowance === "0") {
+          next.meal_allowance = "4.5";
+        }
+      }
+      return next;
+    });
     setErrors((prev) => ({ ...prev, [key]: "" }));
   };
 
   const onDraftChange =
     (index: number, key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const value = e.target.value;
-      setDraftForms((prev) => prev.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
+      setDraftForms((prev) =>
+        prev.map((row, i) => {
+          if (i !== index) return row;
+          const next = { ...row, [key]: value };
+          if (key === "date" && !String(row.pay_rate || "").trim()) next.pay_rate = getAutoPayRate(value);
+          if (key === "break_time") {
+            const breakHours = Number(value);
+            if (Number.isFinite(breakHours) && breakHours <= 0) {
+              next.meal_allowance = "0";
+            } else if (next.meal_allowance === "" || next.meal_allowance === "0") {
+              next.meal_allowance = "4.5";
+            }
+          }
+          return next;
+        })
+      );
       setDraftErrors((prev) => prev.map((rowErr, i) => (i === index ? { ...rowErr, [key]: "" } : rowErr)));
     };
 
@@ -383,8 +431,9 @@ export default function WorkEntry() {
         start_time: entry.start_time || "",
         end_time: entry.end_time || "",
         break_time: String(entry.break_time ?? 1),
-        pay_rate: String(entry.pay_rate ?? ""),
-        meal_allowance: String(entry.meal_allowance ?? 0),
+        pay_rate: String(entry.pay_rate ?? getAutoPayRate(entry.date || "")),
+        meal_allowance:
+          Number(entry.break_time ?? 1) > 0 ? String(entry.meal_allowance ?? 4.5) : "0",
         notes: entry.notes || "",
       });
     } catch (err: any) {
@@ -777,104 +826,21 @@ export default function WorkEntry() {
           {entryMode === "multiple" && !editingId ? (
             <form onSubmit={onSubmitMultiple} className="space-y-5">
               <div className="space-y-4">
-                {draftForms.map((row, idx) => {
-                  const rowErrors = draftErrors[idx] || {};
-                  return (
-                    <div key={idx} className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4">
-                      <div className="mb-4 flex items-center justify-between">
-                        <div className="text-sm font-medium text-trackify-text">Entry {idx + 1}</div>
-                        {draftForms.length > 1 ? (
-                          <Button type="button" variant="secondary" onClick={() => removeDraftRow(idx)} disabled={isSaving}>
-                            Remove
-                          </Button>
-                        ) : null}
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <div className="mb-2 text-xs text-trackify-muted">Date</div>
-                          <Input
-                            type="date"
-                            value={row.date}
-                            onChange={onDraftChange(idx, "date")}
-                            state={rowErrors.date ? "error" : "default"}
-                          />
-                          {rowErrors.date ? <div className="mt-1 text-xs text-trackify-muted">{rowErrors.date}</div> : null}
-                        </div>
-                        <div>
-                          <div className="mb-2 text-xs text-trackify-muted">Start time</div>
-                          <Input
-                            type="time"
-                            value={row.start_time}
-                            onChange={onDraftChange(idx, "start_time")}
-                            state={rowErrors.start_time ? "error" : "default"}
-                          />
-                          {rowErrors.start_time ? (
-                            <div className="mt-1 text-xs text-trackify-muted">{rowErrors.start_time}</div>
-                          ) : null}
-                        </div>
-                        <div>
-                          <div className="mb-2 text-xs text-trackify-muted">End time</div>
-                          <Input
-                            type="time"
-                            value={row.end_time}
-                            onChange={onDraftChange(idx, "end_time")}
-                            state={rowErrors.end_time ? "error" : "default"}
-                          />
-                          {rowErrors.end_time ? <div className="mt-1 text-xs text-trackify-muted">{rowErrors.end_time}</div> : null}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-3 gap-4">
-                        <div>
-                          <div className="mb-2 text-xs text-trackify-muted">Break time (hours)</div>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.25}
-                            value={row.break_time}
-                            onChange={onDraftChange(idx, "break_time")}
-                            state={rowErrors.break_time ? "error" : "default"}
-                          />
-                          {rowErrors.break_time ? (
-                            <div className="mt-1 text-xs text-trackify-muted">{rowErrors.break_time}</div>
-                          ) : null}
-                        </div>
-                        <div>
-                          <div className="mb-2 text-xs text-trackify-muted">Pay rate</div>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            value={row.pay_rate}
-                            onChange={onDraftChange(idx, "pay_rate")}
-                            state={rowErrors.pay_rate ? "error" : "default"}
-                          />
-                          {rowErrors.pay_rate ? <div className="mt-1 text-xs text-trackify-muted">{rowErrors.pay_rate}</div> : null}
-                        </div>
-                        <div>
-                          <div className="mb-2 text-xs text-trackify-muted">Meal allowance</div>
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            value={row.meal_allowance}
-                            onChange={onDraftChange(idx, "meal_allowance")}
-                            state={rowErrors.meal_allowance ? "error" : "default"}
-                          />
-                          {rowErrors.meal_allowance ? (
-                            <div className="mt-1 text-xs text-trackify-muted">{rowErrors.meal_allowance}</div>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="mb-2 text-xs text-trackify-muted">Notes (optional)</div>
-                        <Input value={row.notes} onChange={onDraftChange(idx, "notes")} placeholder="Optional" />
-                      </div>
-                    </div>
-                  );
-                })}
+                {draftForms.map((row, idx) => (
+                  <WorkEntryDraftCard
+                    key={idx}
+                    index={idx}
+                    value={row}
+                    errors={draftErrors[idx] || {}}
+                    disabled={isSaving}
+                    onChange={(next) => {
+                      setDraftForms((prev) => prev.map((r, i) => (i === idx ? next : r)));
+                      setDraftErrors((prev) => prev.map((e, i) => (i === idx ? {} : e)));
+                      setMultiSubmitError("");
+                    }}
+                    onRemove={draftForms.length > 1 ? () => removeDraftRow(idx) : undefined}
+                  />
+                ))}
               </div>
 
               {multiSubmitError ? (
@@ -896,86 +862,140 @@ export default function WorkEntry() {
               </div>
             </form>
           ) : (
-            <form onSubmit={onSubmit} className="space-y-5">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <div className="mb-2 text-xs text-trackify-muted">Date</div>
-                <Input type="date" value={form.date} onChange={onChange("date")} state={errors.date ? "error" : "default"} />
-                {errors.date ? <div className="mt-1 text-xs text-trackify-muted">{errors.date}</div> : null}
-              </div>
-              <div>
-                <div className="mb-2 text-xs text-trackify-muted">Start time</div>
-                <Input type="time" value={form.start_time} onChange={onChange("start_time")} state={errors.start_time ? "error" : "default"} />
-                {errors.start_time ? <div className="mt-1 text-xs text-trackify-muted">{errors.start_time}</div> : null}
-              </div>
-              <div>
-                <div className="mb-2 text-xs text-trackify-muted">End time</div>
-                <Input type="time" value={form.end_time} onChange={onChange("end_time")} state={errors.end_time ? "error" : "default"} />
-                {errors.end_time ? <div className="mt-1 text-xs text-trackify-muted">{errors.end_time}</div> : null}
-              </div>
-            </div>
+            editingId ? (
+              <form onSubmit={onSubmit} className="space-y-5">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <div className="mb-2 text-xs text-trackify-muted">Date</div>
+                    <Input
+                      type="date"
+                      value={form.date}
+                      onChange={onChange("date")}
+                      state={errors.date ? "error" : "default"}
+                    />
+                    {errors.date ? <div className="mt-1 text-xs text-trackify-muted">{errors.date}</div> : null}
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs text-trackify-muted">Start time</div>
+                    <Input
+                      type="time"
+                      value={form.start_time}
+                      onChange={onChange("start_time")}
+                      state={errors.start_time ? "error" : "default"}
+                    />
+                    {errors.start_time ? (
+                      <div className="mt-1 text-xs text-trackify-muted">{errors.start_time}</div>
+                    ) : null}
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs text-trackify-muted">End time</div>
+                    <Input
+                      type="time"
+                      value={form.end_time}
+                      onChange={onChange("end_time")}
+                      state={errors.end_time ? "error" : "default"}
+                    />
+                    {errors.end_time ? <div className="mt-1 text-xs text-trackify-muted">{errors.end_time}</div> : null}
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <div className="mb-2 text-xs text-trackify-muted">Break time (hours)</div>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.25}
-                  value={form.break_time}
-                  onChange={onChange("break_time")}
-                  state={errors.break_time ? "error" : "default"}
-                />
-                {errors.break_time ? <div className="mt-1 text-xs text-trackify-muted">{errors.break_time}</div> : null}
-              </div>
-              <div>
-                <div className="mb-2 text-xs text-trackify-muted">Pay rate</div>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={form.pay_rate}
-                  onChange={onChange("pay_rate")}
-                  state={errors.pay_rate ? "error" : "default"}
-                />
-                {errors.pay_rate ? <div className="mt-1 text-xs text-trackify-muted">{errors.pay_rate}</div> : null}
-              </div>
-              <div>
-                <div className="mb-2 text-xs text-trackify-muted">Meal allowance</div>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={form.meal_allowance}
-                  onChange={onChange("meal_allowance")}
-                  state={errors.meal_allowance ? "error" : "default"}
-                />
-                {errors.meal_allowance ? (
-                  <div className="mt-1 text-xs text-trackify-muted">{errors.meal_allowance}</div>
+                <div className={`grid gap-4 ${Number(form.break_time || 1) > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+                  <div>
+                    <div className="mb-2 text-xs text-trackify-muted">Break time (hours)</div>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={form.break_time}
+                      onChange={onChange("break_time")}
+                      state={errors.break_time ? "error" : "default"}
+                    />
+                    {errors.break_time ? (
+                      <div className="mt-1 text-xs text-trackify-muted">{errors.break_time}</div>
+                    ) : null}
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs text-trackify-muted">Pay rate</div>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={form.pay_rate}
+                      onChange={onChange("pay_rate")}
+                      state={errors.pay_rate ? "error" : "default"}
+                    />
+                    {errors.pay_rate ? <div className="mt-1 text-xs text-trackify-muted">{errors.pay_rate}</div> : null}
+                  </div>
+                  {Number(form.break_time || 1) > 0 ? (
+                    <div>
+                      <div className="mb-2 text-xs text-trackify-muted">Meal allowance</div>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={form.meal_allowance}
+                        onChange={onChange("meal_allowance")}
+                        state={errors.meal_allowance ? "error" : "default"}
+                      />
+                      {errors.meal_allowance ? (
+                        <div className="mt-1 text-xs text-trackify-muted">{errors.meal_allowance}</div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div>
+                  <div className="mb-2 text-xs text-trackify-muted">Notes (optional)</div>
+                  <Textarea value={form.notes} onChange={onChange("notes")} placeholder="Add notes for this shift" />
+                </div>
+
+                {submitError ? (
+                  <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+                    {submitError}
+                  </div>
                 ) : null}
+
+                <div className="flex items-center gap-3">
+                  <Button type="submit" disabled={isSaving}>
+                    Update entry
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={resetForm} disabled={isSaving}>
+                    Reset
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="bg-trackify-bg">
+                {submitError ? (
+                  <div className="mb-4 rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+                    {submitError}
+                  </div>
+                ) : null}
+                <WorkEntryForm
+                  isSaving={isSaving}
+                  onSubmit={async (payload) => {
+                    setSubmitError("");
+                    setIsSaving(true);
+                    try {
+                      await createWorkEntry({ payload });
+                      refreshList();
+                    } catch (err: any) {
+                      setSubmitError(err?.response?.data?.error?.message || err?.message || "Failed to save work entry");
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
+                  onReset={() => setSubmitError("")}
+                  onAddAnother={() => {
+                    setEntryMode("multiple");
+                    setDraftForms([getDefaultForm(), getDefaultForm()]);
+                    setDraftErrors([{}, {}]);
+                    setMultiSubmitError("");
+                    setSubmitError("");
+                  }}
+                />
               </div>
-            </div>
-
-            <div>
-              <div className="mb-2 text-xs text-trackify-muted">Notes (optional)</div>
-              <Textarea value={form.notes} onChange={onChange("notes")} placeholder="Add notes for this shift" />
-            </div>
-
-            {submitError ? (
-              <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
-                {submitError}
-              </div>
-            ) : null}
-
-            <div className="flex items-center gap-3">
-              <Button type="submit" disabled={isSaving}>
-                {editingId ? "Update entry" : "Create entry"}
-              </Button>
-              <Button type="button" variant="secondary" onClick={resetForm} disabled={isSaving}>
-                Reset
-              </Button>
-            </div>
-          </form>
+            )
           )}
         </CardContent>
       </Card>

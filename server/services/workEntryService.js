@@ -28,6 +28,23 @@ const parseTimeToMinutes = (timeStr) => {
 
 const round2 = (num) => Math.round(num * 100) / 100;
 
+const REGULAR_PAY_RATE = 13;
+const SPECIAL_PAY_RATE = 15;
+const DEFAULT_MEAL_ALLOWANCE = 4.5;
+
+let cachedPublicHolidaySet;
+const getPublicHolidaySetFromEnv = () => {
+  if (cachedPublicHolidaySet) return cachedPublicHolidaySet;
+  const raw = String(process.env.PUBLIC_HOLIDAYS || '').trim();
+  const dates = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((d) => d.replaceAll('/', '-'));
+  cachedPublicHolidaySet = new Set(dates);
+  return cachedPublicHolidaySet;
+};
+
 const isWeekend = (dateStr) => {
   const date = new Date(`${dateStr}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return false;
@@ -35,7 +52,29 @@ const isWeekend = (dateStr) => {
   return day === 0 || day === 6;
 };
 
-const calculateWorkEntry = ({ date, startTime, endTime, breakTime, payRate, weekendPayRate, mealAllowance }) => {
+const isPublicHoliday = async ({ supabase, date }) => {
+  const envSet = getPublicHolidaySetFromEnv();
+  if (envSet.has(date)) return true;
+
+  const { data, error } = await supabase.from('public_holidays').select('date').eq('date', date).maybeSingle();
+  if (error) {
+    const msg = String(error.message || '');
+    if (msg.includes('public_holidays') && msg.includes('does not exist')) return false;
+    return false;
+  }
+
+  return Boolean(data?.date);
+};
+
+const getAppliedRate = async ({ supabase, date }) => {
+  const weekend = isWeekend(date);
+  if (weekend) return SPECIAL_PAY_RATE;
+  const holiday = await isPublicHoliday({ supabase, date });
+  if (holiday) return SPECIAL_PAY_RATE;
+  return REGULAR_PAY_RATE;
+};
+
+const calculateWorkEntry = ({ startTime, endTime, breakTime, payRate, mealAllowance }) => {
   const startMinutes = parseTimeToMinutes(startTime);
   const endMinutes = parseTimeToMinutes(endTime);
   if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) {
@@ -53,9 +92,7 @@ const calculateWorkEntry = ({ date, startTime, endTime, breakTime, payRate, week
     throw new HttpError('Break time cannot exceed total hours', 400);
   }
 
-  const weekend = isWeekend(date);
-  const appliedRate = weekend && weekendPayRate > 0 ? weekendPayRate : payRate;
-  const totalPay = payableHours * appliedRate + mealAllowance;
+  const totalPay = payableHours * payRate + mealAllowance;
 
   return {
     total_hours: round2(totalHours),
@@ -78,14 +115,16 @@ const validateWorkEntryInput = (input) => {
   const break_time = toNumber(input.break_time, 1);
   const pay_rate = toNumber(input.pay_rate, NaN);
   const weekend_pay_rate = toNumber(input.weekend_pay_rate, 0);
-  const meal_allowance = toNumber(input.meal_allowance, 0);
+  const meal_allowance = toNumber(input.meal_allowance, NaN);
 
   if (!Number.isFinite(break_time) || break_time < 0) throw new HttpError('break_time must be a non-negative number', 400);
-  if (!Number.isFinite(pay_rate) || pay_rate < 0) throw new HttpError('pay_rate is required and must be >= 0', 400);
+  if (Number.isFinite(pay_rate) && pay_rate < 0) throw new HttpError('pay_rate must be >= 0', 400);
   if (!Number.isFinite(weekend_pay_rate) || weekend_pay_rate < 0) {
     throw new HttpError('weekend_pay_rate must be >= 0', 400);
   }
-  if (!Number.isFinite(meal_allowance) || meal_allowance < 0) {
+
+  const normalizedMealAllowance = break_time > 0 ? (Number.isFinite(meal_allowance) ? meal_allowance : DEFAULT_MEAL_ALLOWANCE) : 0;
+  if (!Number.isFinite(normalizedMealAllowance) || normalizedMealAllowance < 0) {
     throw new HttpError('meal_allowance must be >= 0', 400);
   }
 
@@ -94,29 +133,30 @@ const validateWorkEntryInput = (input) => {
     start_time,
     end_time,
     break_time,
-    pay_rate,
+    pay_rate: Number.isFinite(pay_rate) ? pay_rate : null,
     weekend_pay_rate,
-    meal_allowance,
+    meal_allowance: normalizedMealAllowance,
     notes,
   };
 };
 
 const createWorkEntry = async ({ userId, input }) => {
   const validated = validateWorkEntryInput(input);
+  const supabase = getSupabaseAdminClient();
+  const appliedRate = Number.isFinite(validated.pay_rate) ? validated.pay_rate : await getAppliedRate({ supabase, date: validated.date });
   const calc = calculateWorkEntry({
-    date: validated.date,
     startTime: validated.start_time,
     endTime: validated.end_time,
     breakTime: validated.break_time,
-    payRate: validated.pay_rate,
-    weekendPayRate: validated.weekend_pay_rate,
+    payRate: appliedRate,
     mealAllowance: validated.meal_allowance,
   });
 
-  const supabase = getSupabaseAdminClient();
   const payload = {
     user_id: userId,
     ...validated,
+    pay_rate: appliedRate,
+    weekend_pay_rate: SPECIAL_PAY_RATE,
     ...calc,
   };
 
@@ -148,19 +188,20 @@ const getWorkEntryById = async ({ userId, id }) => {
 
 const updateWorkEntryById = async ({ userId, id, input }) => {
   const validated = validateWorkEntryInput(input);
+  const supabase = getSupabaseAdminClient();
+  const appliedRate = Number.isFinite(validated.pay_rate) ? validated.pay_rate : await getAppliedRate({ supabase, date: validated.date });
   const calc = calculateWorkEntry({
-    date: validated.date,
     startTime: validated.start_time,
     endTime: validated.end_time,
     breakTime: validated.break_time,
-    payRate: validated.pay_rate,
-    weekendPayRate: validated.weekend_pay_rate,
+    payRate: appliedRate,
     mealAllowance: validated.meal_allowance,
   });
 
-  const supabase = getSupabaseAdminClient();
   const updates = {
     ...validated,
+    pay_rate: appliedRate,
+    weekend_pay_rate: SPECIAL_PAY_RATE,
     ...calc,
   };
 
@@ -192,4 +233,3 @@ module.exports = {
   listWorkEntries,
   updateWorkEntryById,
 };
-

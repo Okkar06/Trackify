@@ -45,10 +45,10 @@ export default function Settings() {
   const [error, setError] = React.useState<string>("");
   const [success, setSuccess] = React.useState<string>("");
   const [workDefaults, setWorkDefaults] = React.useState<WorkDefaults>({
-    defaultPayRate: "0",
-    defaultWeekendPayRate: "0",
+    defaultPayRate: "13",
+    defaultWeekendPayRate: "15",
     defaultBreakTime: "1",
-    defaultMealAllowance: "0",
+    defaultMealAllowance: "4.5",
   });
   const [workSaving, setWorkSaving] = React.useState(false);
   const [workError, setWorkError] = React.useState("");
@@ -79,10 +79,10 @@ export default function Settings() {
         const ws = workRes?.workSettings;
         if (ws) {
           setWorkDefaults({
-            defaultPayRate: String(ws.defaultPayRate ?? 0),
-            defaultWeekendPayRate: String(ws.defaultWeekendPayRate ?? 0),
+            defaultPayRate: "13",
+            defaultWeekendPayRate: "15",
             defaultBreakTime: String(ws.defaultBreakTime ?? 1),
-            defaultMealAllowance: String(ws.defaultMealAllowance ?? 0),
+            defaultMealAllowance: "4.5",
           });
         }
       })
@@ -209,10 +209,10 @@ export default function Settings() {
     setWorkSuccess("");
 
     const payload = {
-      defaultPayRate: Number(workDefaults.defaultPayRate),
-      defaultWeekendPayRate: Number(workDefaults.defaultWeekendPayRate),
+      defaultPayRate: 13,
+      defaultWeekendPayRate: 15,
       defaultBreakTime: Number(workDefaults.defaultBreakTime),
-      defaultMealAllowance: Number(workDefaults.defaultMealAllowance),
+      defaultMealAllowance: 4.5,
     };
 
     const bad = Object.values(payload).some((v) => !Number.isFinite(v) || v < 0);
@@ -227,10 +227,10 @@ export default function Settings() {
       const ws = res?.workSettings;
       if (ws) {
         setWorkDefaults({
-          defaultPayRate: String(ws.defaultPayRate ?? 0),
-          defaultWeekendPayRate: String(ws.defaultWeekendPayRate ?? 0),
+          defaultPayRate: "13",
+          defaultWeekendPayRate: "15",
           defaultBreakTime: String(ws.defaultBreakTime ?? 1),
-          defaultMealAllowance: String(ws.defaultMealAllowance ?? 0),
+          defaultMealAllowance: "4.5",
         });
       }
       setWorkSuccess("Work defaults saved");
@@ -382,6 +382,7 @@ export default function Settings() {
           <div>
             <div className="text-sm font-medium text-trackify-text">Work defaults</div>
             <div className="mt-1 text-sm text-trackify-muted">Auto-fill new work entries</div>
+            <div className="mt-1 text-sm text-trackify-muted">Pay rates: 13 (weekday), 15 (weekend/public holiday)</div>
           </div>
         </CardHeader>
         <CardContent>
@@ -394,7 +395,7 @@ export default function Settings() {
                   min={0}
                   step={0.01}
                   value={workDefaults.defaultPayRate}
-                  onChange={onWorkChange("defaultPayRate")}
+                  disabled
                 />
               </div>
               <div>
@@ -404,7 +405,7 @@ export default function Settings() {
                   min={0}
                   step={0.01}
                   value={workDefaults.defaultWeekendPayRate}
-                  onChange={onWorkChange("defaultWeekendPayRate")}
+                  disabled
                 />
               </div>
               <div>
@@ -424,7 +425,7 @@ export default function Settings() {
                   min={0}
                   step={0.01}
                   value={workDefaults.defaultMealAllowance}
-                  onChange={onWorkChange("defaultMealAllowance")}
+                  disabled
                 />
               </div>
             </div>
