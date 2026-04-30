@@ -76,14 +76,16 @@ const getAppliedRate = async ({ supabase, date }) => {
 
 const calculateWorkEntry = ({ startTime, endTime, breakTime, payRate, mealAllowance }) => {
   const startMinutes = parseTimeToMinutes(startTime);
-  const endMinutes = parseTimeToMinutes(endTime);
+  let endMinutes = parseTimeToMinutes(endTime);
   if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) {
     throw new HttpError('Invalid start_time or end_time (expected HH:MM)', 400);
   }
 
-  if (endMinutes <= startMinutes) {
-    throw new HttpError('End time must be after start time', 400);
+  if (endMinutes === startMinutes) {
+    throw new HttpError('End time must be different from start time', 400);
   }
+
+  if (endMinutes < startMinutes) endMinutes += 24 * 60;
 
   const totalHours = (endMinutes - startMinutes) / 60;
   const breakHours = breakTime;

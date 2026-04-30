@@ -11,16 +11,19 @@ export default {
     extend: {
       colors: {
         trackify: {
-          bg: "#0A0A0A",
-          surface: "#181818",
-          border: "#2A2A2A",
-          text: "#FFFFFF",
-          muted: "#A1A1A1",
+          bg: "#0B0B0C",
+          surface: "#121214",
+          surface2: "#17171A",
+          border: "#26262B",
+          border2: "#2F2F36",
+          text: "#FAFAFA",
+          muted: "#A1A1AA",
+          muted2: "#71717A",
         },
       },
       borderRadius: {
-        card: "12px",
-        control: "10px",
+        card: "16px",
+        control: "12px",
       },
     },
   },

@@ -84,8 +84,10 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
     ampm: selectedAmpm,
   });
 
+  const pretty12 = `${selectedHour12}:${pad2(selectedMinute)} ${selectedAmpm}`;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close"
@@ -99,18 +101,18 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative w-full max-w-lg overflow-hidden rounded-[20px] border border-white/10 bg-[#0A0F1A]/80 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_80px_rgba(0,0,0,0.65)] backdrop-blur-xl transition-all duration-150",
+          "relative w-full max-w-lg overflow-hidden rounded-card border border-trackify-border bg-trackify-surface shadow-[0_1px_0_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.65)] transition-all duration-150",
           open ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
         )}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-trackify-border px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-control border border-white/10 bg-white/5">
-              <Clock className="h-5 w-5 text-sky-200" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface2">
+              <Clock className="h-5 w-5 text-trackify-text" />
             </div>
             <div>
-              <div className="text-sm font-medium text-white">{title || "Select time"}</div>
-              <div className="mt-1 text-xs text-white/60">Tap to choose</div>
+              <div className="text-sm font-medium text-trackify-text">{title || "Select time"}</div>
+              <div className="mt-1 text-xs text-trackify-muted">Tap to choose</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -123,7 +125,7 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
                 onClose();
               }}
               type="button"
-              className="h-9 bg-white text-black hover:bg-white/90"
+              className="h-9"
             >
               Apply
             </Button>
@@ -131,10 +133,10 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
         </div>
 
         <div className="p-5">
-          <div className="relative overflow-hidden rounded-[18px] border border-white/10 bg-white/5">
+          <div className="relative overflow-hidden rounded-control border border-trackify-border bg-trackify-surface2">
             <div className="grid grid-cols-3">
               <div className="px-4 py-4">
-                <div className="mb-2 text-xs text-white/60">Hour</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Hour</div>
                 <div className="grid grid-cols-3 gap-2">
                   {hours12.map((h) => (
                     <button
@@ -144,8 +146,8 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
                       className={cn(
                         "flex h-11 w-full items-center justify-center rounded-control border text-lg transition-colors",
                         h === selectedHour12
-                          ? "border-sky-400/35 bg-sky-400/10 text-white"
-                          : "border-white/10 bg-white/0 text-white/60 hover:bg-white/5 hover:text-white"
+                          ? "border-trackify-border2 bg-trackify-surface2 text-trackify-text"
+                          : "border-trackify-border bg-white/0 text-trackify-muted hover:bg-trackify-surface2 hover:text-trackify-text"
                       )}
                     >
                       {h}
@@ -155,7 +157,7 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
               </div>
 
               <div className="px-4 py-4">
-                <div className="mb-2 text-xs text-white/60">Minute</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Minute</div>
                 <div className="grid grid-cols-2 gap-2">
                   {minutes.map((m) => (
                     <button
@@ -165,8 +167,8 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
                       className={cn(
                         "flex h-11 w-full items-center justify-center rounded-control border text-lg transition-colors tabular-nums",
                         m === selectedMinute
-                          ? "border-sky-400/35 bg-sky-400/10 text-white"
-                          : "border-white/10 bg-white/0 text-white/60 hover:bg-white/5 hover:text-white"
+                          ? "border-trackify-border2 bg-trackify-surface2 text-trackify-text"
+                          : "border-trackify-border bg-white/0 text-trackify-muted hover:bg-trackify-surface2 hover:text-trackify-text"
                       )}
                     >
                       {pad2(m)}
@@ -176,7 +178,7 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
               </div>
 
               <div className="px-4 py-4">
-                <div className="mb-2 text-xs text-white/60">AM/PM</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">AM/PM</div>
                 <div className="grid gap-2">
                   {ampmValues.map((v) => (
                     <button
@@ -186,8 +188,8 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
                       className={cn(
                         "flex h-11 w-full items-center justify-center rounded-control border text-lg transition-colors",
                         v === selectedAmpm
-                          ? "border-sky-400/35 bg-sky-400/10 text-white"
-                          : "border-white/10 bg-white/0 text-white/60 hover:bg-white/5 hover:text-white"
+                          ? "border-trackify-border2 bg-trackify-surface2 text-trackify-text"
+                          : "border-trackify-border bg-white/0 text-trackify-muted hover:bg-trackify-surface2 hover:text-trackify-text"
                       )}
                     >
                       {v}
@@ -198,8 +200,9 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
             </div>
           </div>
 
-          <div className="mt-4 text-center text-sm text-white/70">
-            Selected: <span className="font-medium text-white">{nextValue}</span>
+          <div className="mt-4 text-center text-sm text-trackify-muted">
+            Selected: <span className="font-medium text-trackify-text">{pretty12}</span>
+            <span className="text-trackify-muted2"> • {nextValue}</span>
           </div>
         </div>
       </div>

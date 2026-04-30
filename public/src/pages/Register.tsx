@@ -61,22 +61,22 @@ export default function Register() {
   return (
     <Card className="w-full max-w-lg">
       <CardHeader>
-        <div className="text-lg font-semibold text-trackify-text">Create account</div>
-        <div className="mt-2 text-sm text-trackify-muted">Set up Trackify in under a minute</div>
+        <div className="text-xl font-semibold tracking-tight text-trackify-text">Create account</div>
+        <div className="mt-2 text-sm text-trackify-muted">Get started in under a minute</div>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <div className="mb-2 text-xs text-trackify-muted">Full name</div>
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Full name</div>
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" />
           </div>
           <div>
-            <div className="mb-2 text-xs text-trackify-muted">Email</div>
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Email</div>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="mb-2 text-xs text-trackify-muted">Password</div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Password</div>
               <Input
                 type="password"
                 value={password}
@@ -85,7 +85,7 @@ export default function Register() {
               />
             </div>
             <div>
-              <div className="mb-2 text-xs text-trackify-muted">Confirm</div>
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Confirm</div>
               <Input
                 type="password"
                 value={confirmPassword}
@@ -96,13 +96,13 @@ export default function Register() {
           </div>
 
           {success ? (
-            <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+            <div className="rounded-control border border-white/15 bg-trackify-surface2 px-4 py-3 text-sm text-trackify-text">
               {success}
             </div>
           ) : null}
 
           {error ? (
-            <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+            <div className="rounded-control border border-white/15 bg-trackify-surface2 px-4 py-3 text-sm text-trackify-text">
               {error}
             </div>
           ) : null}
@@ -122,4 +122,3 @@ export default function Register() {
     </Card>
   );
 }
-

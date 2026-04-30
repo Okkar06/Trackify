@@ -51,7 +51,7 @@ export default function DatePickerModal({ open, value, onChange, onClose, title 
   if (!isMounted) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close"
@@ -65,18 +65,18 @@ export default function DatePickerModal({ open, value, onChange, onClose, title 
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative w-full max-w-lg overflow-hidden rounded-[20px] border border-white/10 bg-[#0A0F1A]/80 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_24px_80px_rgba(0,0,0,0.65)] backdrop-blur-xl transition-all duration-150",
+          "relative w-full max-w-lg overflow-hidden rounded-card border border-trackify-border bg-trackify-surface shadow-[0_1px_0_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.65)] transition-all duration-150",
           open ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
         )}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-trackify-border px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-control border border-white/10 bg-white/5">
-              <Calendar className="h-5 w-5 text-sky-200" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface2">
+              <Calendar className="h-5 w-5 text-trackify-text" />
             </div>
             <div>
-              <div className="text-sm font-medium text-white">{title || "Select date"}</div>
-              <div className="mt-1 text-xs text-white/60">Tap a day to apply</div>
+              <div className="text-sm font-medium text-trackify-text">{title || "Select date"}</div>
+              <div className="mt-1 text-xs text-trackify-muted">Tap a day to apply</div>
             </div>
           </div>
           <Button variant="secondary" onClick={onClose} type="button" className="h-9">
@@ -85,7 +85,7 @@ export default function DatePickerModal({ open, value, onChange, onClose, title 
         </div>
 
         <div className="p-5">
-          <div className="rounded-[18px] border border-white/10 bg-white/5 p-4">
+          <div className="rounded-control border border-trackify-border bg-trackify-surface2 p-4">
             <CalendarMonth
               month={month}
               year={year}

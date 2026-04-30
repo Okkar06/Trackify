@@ -39,6 +39,15 @@ const parseTimeToMinutes = (timeStr: string) => {
   return hours * 60 + minutes;
 };
 
+const getShiftMinutes = ({ start, end }: { start: string; end: string }) => {
+  const s = parseTimeToMinutes(start);
+  const e0 = parseTimeToMinutes(end);
+  if (!Number.isFinite(s) || !Number.isFinite(e0)) return null;
+  if (e0 === s) return null;
+  const e = e0 < s ? e0 + 24 * 60 : e0;
+  return e - s;
+};
+
 const formatPrettyDate = (iso: string) => {
   if (!iso) return "";
   const date = new Date(`${iso}T00:00:00Z`);
@@ -91,11 +100,9 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
   const mealAllowance = includeMeal ? 4.5 : 0;
 
   const totalHours = React.useMemo(() => {
-    const s = parseTimeToMinutes(value.start_time);
-    const e = parseTimeToMinutes(value.end_time);
-    if (!Number.isFinite(s) || !Number.isFinite(e)) return null;
-    if (e <= s) return null;
-    return (e - s) / 60;
+    const minutes = getShiftMinutes({ start: value.start_time, end: value.end_time });
+    if (minutes === null) return null;
+    return minutes / 60;
   }, [value.start_time, value.end_time]);
 
   const payableHours = React.useMemo(() => {
@@ -119,18 +126,22 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
     const e = value.end_time ? formatPrettyTime(value.end_time) : "";
     if (!d && !s && !e) return "";
     const t = s && e ? `${s} - ${e}` : s ? `${s}` : e ? `${e}` : "";
-    return [d, t].filter(Boolean).join(" • ");
+    const startMinutes = parseTimeToMinutes(value.start_time);
+    const endMinutes = parseTimeToMinutes(value.end_time);
+    const overnight =
+      Number.isFinite(startMinutes) && Number.isFinite(endMinutes) && endMinutes < startMinutes ? "+1 day" : "";
+    return [d, t, overnight].filter(Boolean).join(" • ");
   }, [value.date, value.end_time, value.start_time]);
 
   return (
-    <div className="rounded-[24px] border border-white/10 bg-[#0A0F1A]/70 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_18px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+    <div className="rounded-card border border-trackify-border bg-trackify-surface p-5 shadow-[0_1px_0_rgba(255,255,255,0.04),0_18px_60px_rgba(0,0,0,0.5)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-sm font-semibold text-white">Entry {index + 1}</div>
-          <div className="mt-1 text-xs text-white/60">{headerLine || "Select date and times"}</div>
+          <div className="text-sm font-semibold text-trackify-text">Entry {index + 1}</div>
+          <div className="mt-1 text-xs text-trackify-muted">{headerLine || "Select date and times"}</div>
         </div>
         {onRemove ? (
-          <Button type="button" variant="secondary" onClick={onRemove} disabled={disabled} className="h-9 border-white/10">
+          <Button type="button" variant="secondary" onClick={onRemove} disabled={disabled} className="h-9">
             <Trash2 className="h-4 w-4" />
             Remove
           </Button>
@@ -143,16 +154,16 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
           onClick={() => setOpenDate(true)}
           disabled={disabled}
           className={cn(
-            "group flex w-full items-center justify-between rounded-[18px] border bg-white/5 px-4 py-4 text-left transition-all",
-            "border-white/10 hover:border-sky-400/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/40",
-            errors?.date ? "border-rose-400/40" : ""
+            "group flex w-full items-center justify-between rounded-control border bg-trackify-surface2 px-4 py-4 text-left transition-colors",
+            "border-trackify-border hover:border-trackify-border2 hover:bg-trackify-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15",
+            errors?.date ? "border-white/25" : ""
           )}
         >
           <div>
-            <div className="text-xs text-white/60">Date</div>
-            <div className="mt-1 text-sm font-medium text-white">{value.date ? formatPrettyDate(value.date) : "Select date"}</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Date</div>
+            <div className="mt-1 text-sm font-medium text-trackify-text">{value.date ? formatPrettyDate(value.date) : "Select date"}</div>
           </div>
-          <Calendar className="h-5 w-5 text-white/60 group-hover:text-sky-200" />
+          <Calendar className="h-5 w-5 text-trackify-muted group-hover:text-trackify-text" />
         </button>
 
         <button
@@ -160,18 +171,18 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
           onClick={() => setOpenStart(true)}
           disabled={disabled}
           className={cn(
-            "group flex w-full items-center justify-between rounded-[18px] border bg-white/5 px-4 py-4 text-left transition-all",
-            "border-white/10 hover:border-sky-400/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/40",
-            errors?.start_time ? "border-rose-400/40" : ""
+            "group flex w-full items-center justify-between rounded-control border bg-trackify-surface2 px-4 py-4 text-left transition-colors",
+            "border-trackify-border hover:border-trackify-border2 hover:bg-trackify-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15",
+            errors?.start_time ? "border-white/25" : ""
           )}
         >
           <div>
-            <div className="text-xs text-white/60">Start</div>
-            <div className="mt-1 text-sm font-medium text-white">
+            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Start</div>
+            <div className="mt-1 text-sm font-medium text-trackify-text">
               {value.start_time ? formatPrettyTime(value.start_time) : "Select time"}
             </div>
           </div>
-          <Clock className="h-5 w-5 text-white/60 group-hover:text-sky-200" />
+          <Clock className="h-5 w-5 text-trackify-muted group-hover:text-trackify-text" />
         </button>
 
         <button
@@ -179,58 +190,58 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
           onClick={() => setOpenEnd(true)}
           disabled={disabled}
           className={cn(
-            "group flex w-full items-center justify-between rounded-[18px] border bg-white/5 px-4 py-4 text-left transition-all",
-            "border-white/10 hover:border-sky-400/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/40",
-            errors?.end_time ? "border-rose-400/40" : ""
+            "group flex w-full items-center justify-between rounded-control border bg-trackify-surface2 px-4 py-4 text-left transition-colors",
+            "border-trackify-border hover:border-trackify-border2 hover:bg-trackify-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15",
+            errors?.end_time ? "border-white/25" : ""
           )}
         >
           <div>
-            <div className="text-xs text-white/60">End</div>
-            <div className="mt-1 text-sm font-medium text-white">{value.end_time ? formatPrettyTime(value.end_time) : "Select time"}</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">End</div>
+            <div className="mt-1 text-sm font-medium text-trackify-text">{value.end_time ? formatPrettyTime(value.end_time) : "Select time"}</div>
           </div>
-          <Clock className="h-5 w-5 text-white/60 group-hover:text-sky-200" />
+          <Clock className="h-5 w-5 text-trackify-muted group-hover:text-trackify-text" />
         </button>
       </div>
 
       {showError ? (
-        <div className="mt-3 rounded-[18px] border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div className="mt-3 rounded-control border border-white/15 bg-trackify-surface2 px-4 py-3 text-sm text-trackify-text">
           {errorText}
         </div>
       ) : null}
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-          <div className="text-xs text-white/60">Break time</div>
+        <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+          <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Break time</div>
           <div className="mt-2 flex items-center justify-between">
             <button
               type="button"
               onClick={() => onChange({ ...value, break_time: String(Math.max(0, breakHours - 1)), meal_allowance: breakHours - 1 > 0 ? "4.5" : "0" })}
               disabled={disabled}
-              className="flex h-10 w-10 items-center justify-center rounded-control border border-white/10 bg-white/5 text-white/80 transition-all hover:border-sky-400/30 hover:bg-white/10 disabled:opacity-50"
+              className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2 disabled:opacity-50"
             >
               <Minus className="h-4 w-4" />
             </button>
             <div className="text-center">
-              <div className="text-lg font-semibold text-white tabular-nums">{breakHours}</div>
-              <div className="text-xs text-white/60">hours</div>
+              <div className="text-lg font-semibold text-trackify-text tabular-nums">{breakHours}</div>
+              <div className="text-xs text-trackify-muted">hours</div>
             </div>
             <button
               type="button"
               onClick={() => onChange({ ...value, break_time: String(breakHours + 1), meal_allowance: "4.5" })}
               disabled={disabled}
-              className="flex h-10 w-10 items-center justify-center rounded-control border border-white/10 bg-white/5 text-white/80 transition-all hover:border-sky-400/30 hover:bg-white/10 disabled:opacity-50"
+              className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2 disabled:opacity-50"
             >
               <Plus className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-          <div className="text-xs text-white/60">Pay rate</div>
+        <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+          <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Pay rate</div>
           <div className="mt-2 flex items-center justify-between gap-3">
             <div className="flex items-baseline gap-2">
-              <div className="text-lg font-semibold text-white tabular-nums">${effectiveRate.toFixed(2)}</div>
-              <div className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/70">
+              <div className="text-lg font-semibold text-trackify-text tabular-nums">${effectiveRate.toFixed(2)}</div>
+              <div className="rounded-full border border-trackify-border bg-trackify-surface px-2 py-1 text-[11px] text-trackify-muted">
                 {String(value.pay_rate || "").trim() ? "Manual" : "Auto"}
               </div>
             </div>
@@ -242,42 +253,42 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
               onChange={(e) => onChange({ ...value, pay_rate: e.target.value })}
               disabled={disabled}
               placeholder={String(autoRate)}
-              className="w-24 rounded-control border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/40 disabled:opacity-50"
+              className="h-10 w-24 rounded-control border border-trackify-border bg-trackify-surface px-3 text-sm text-trackify-text placeholder:text-trackify-muted2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg disabled:opacity-50"
             />
           </div>
-          <div className="mt-1 text-xs text-white/50">Leave blank for auto</div>
+          <div className="mt-1 text-xs text-trackify-muted2">Leave blank for auto</div>
         </div>
 
-        <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-          <div className="text-xs text-white/60">Meal allowance</div>
+        <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+          <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Meal allowance</div>
           <div className="mt-2 flex items-baseline justify-between">
-            <div className="text-lg font-semibold text-white tabular-nums">{includeMeal ? `$${mealAllowance.toFixed(2)}` : "—"}</div>
-            <div className="text-xs text-white/60">{includeMeal ? "Included" : "No break"}</div>
+            <div className="text-lg font-semibold text-trackify-text tabular-nums">{includeMeal ? `$${mealAllowance.toFixed(2)}` : "—"}</div>
+            <div className="text-xs text-trackify-muted">{includeMeal ? "Included" : "No break"}</div>
           </div>
         </div>
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-          <div className="text-xs text-white/60">Total hours</div>
-          <div className="mt-2 text-2xl font-semibold text-white tabular-nums">{totalHours === null ? "—" : totalHours.toFixed(2)}</div>
-          <div className="mt-1 text-xs text-white/50">Calculated from start/end</div>
+        <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+          <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Total hours</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-trackify-text tabular-nums">{totalHours === null ? "—" : totalHours.toFixed(2)}</div>
+          <div className="mt-1 text-xs text-trackify-muted2">Calculated from start/end</div>
         </div>
-        <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-          <div className="text-xs text-white/60">Total pay preview</div>
-          <div className="mt-2 text-2xl font-semibold text-white tabular-nums">{payPreview === null ? "—" : `$${payPreview.toFixed(2)}`}</div>
-          <div className="mt-1 text-xs text-white/50">Final values are calculated on save</div>
+        <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+          <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Total pay preview</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-trackify-text tabular-nums">{payPreview === null ? "—" : `$${payPreview.toFixed(2)}`}</div>
+          <div className="mt-1 text-xs text-trackify-muted2">Final values are calculated on save</div>
         </div>
       </div>
 
-      <div className="mt-3 rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-        <div className="text-xs text-white/60">Notes (optional)</div>
+      <div className="mt-3 rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Notes (optional)</div>
         <div className="mt-2">
           <Textarea
             value={value.notes}
             onChange={(e) => onChange({ ...value, notes: e.target.value })}
             placeholder="Add notes for this shift"
-            className="min-h-[92px] bg-transparent text-white placeholder:text-white/40"
+            className="min-h-[92px]"
           />
         </div>
       </div>
@@ -305,4 +316,3 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
     </div>
   );
 }
-

@@ -12,15 +12,14 @@ export default function Button({ className, variant = "primary", ...props }: But
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-control border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-muted focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex h-10 items-center justify-center gap-2 rounded-control border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" &&
-          "border-trackify-border bg-trackify-text text-trackify-bg hover:bg-white/90",
+          "border-trackify-border bg-trackify-text text-trackify-bg hover:bg-white/90 active:bg-white/80",
         variant === "secondary" &&
-          "border-trackify-border bg-trackify-surface text-trackify-text hover:bg-white/5",
+          "border-trackify-border bg-trackify-surface text-trackify-text hover:bg-trackify-surface2 active:bg-trackify-surface2",
         className
       )}
       {...props}
     />
   );
 }
-

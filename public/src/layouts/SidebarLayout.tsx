@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Palette, Settings, Wallet } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Wallet } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { cn } from "@/utils/cn";
@@ -12,8 +12,6 @@ const getPageTitle = (pathname: string) => {
   if (pathname === "/") return "Dashboard";
   if (pathname.startsWith("/work")) return "Work";
   if (pathname.startsWith("/pay")) return "Pay Calculator";
-  if (pathname.startsWith("/settings")) return "Settings";
-  if (pathname.startsWith("/styleguide")) return "UI Style Guide";
   return "Not Found";
 };
 
@@ -24,7 +22,6 @@ type NavItem = {
   disabled?: boolean;
 };
 
-const showStyleGuide = import.meta.env.DEV;
 const SIDEBAR_COLLAPSED_KEY = "trackify_sidebar_collapsed";
 
 const getInitialCollapsed = () => {
@@ -39,8 +36,6 @@ const navItems: NavItem[] = [
   { label: "Dashboard", to: "/", icon: LayoutGrid },
   { label: "Work", to: "/work", icon: CalendarDays },
   { label: "Pay", to: "/pay", icon: Wallet },
-  { label: "Settings", to: "/settings", icon: Settings },
-  ...(showStyleGuide ? [{ label: "Style Guide", to: "/styleguide", icon: Palette }] : []),
 ];
 
 export default function SidebarLayout() {
@@ -132,11 +127,11 @@ export default function SidebarLayout() {
                       title={item.label}
                       className={({ isActive }) =>
                         cn(
-                          "flex items-center rounded-control px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-muted focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-surface",
+                          "flex items-center rounded-control px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-surface",
                           isCollapsed ? "justify-center" : "gap-3",
-                          "hover:bg-white/5",
+                          "hover:bg-trackify-surface2",
                           isActive
-                            ? "border border-trackify-border bg-white/5 text-trackify-text"
+                            ? "border border-trackify-border2 bg-trackify-surface2 text-trackify-text"
                             : "text-trackify-muted"
                         )
                       }
@@ -159,10 +154,10 @@ export default function SidebarLayout() {
 
         <main className="min-h-screen">
           <div className="container">
-            <header className="sticky top-0 z-10 flex items-center justify-between border-b border-trackify-border bg-trackify-bg py-6">
+            <header className="sticky top-0 z-10 flex items-center justify-between border-b border-trackify-border bg-trackify-bg/80 py-6 backdrop-blur">
               <div>
                 <h1 className="text-2xl font-semibold text-trackify-text">{title}</h1>
-                <p className="mt-1 text-sm text-trackify-muted">Black-and-white UI shell</p>
+                <p className="mt-1 text-sm text-trackify-muted">Track shifts, hours, and pay</p>
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-sm text-trackify-muted">{displayName || "Account"}</div>

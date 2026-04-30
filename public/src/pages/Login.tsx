@@ -49,17 +49,17 @@ export default function Login() {
   return (
     <Card className="w-full max-w-lg">
       <CardHeader>
-        <div className="text-lg font-semibold text-trackify-text">Log in</div>
-        <div className="mt-2 text-sm text-trackify-muted">Access your dashboard and work history</div>
+        <div className="text-xl font-semibold tracking-tight text-trackify-text">Log in</div>
+        <div className="mt-2 text-sm text-trackify-muted">Welcome back</div>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <div className="mb-2 text-xs text-trackify-muted">Email</div>
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Email</div>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           </div>
           <div>
-            <div className="mb-2 text-xs text-trackify-muted">Password</div>
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Password</div>
             <Input
               type="password"
               value={password}
@@ -69,13 +69,13 @@ export default function Login() {
           </div>
 
           {localError ? (
-            <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+            <div className="rounded-control border border-white/15 bg-trackify-surface2 px-4 py-3 text-sm text-trackify-text">
               {localError}
             </div>
           ) : null}
 
           {error ? (
-            <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-3 text-sm text-trackify-muted">
+            <div className="rounded-control border border-white/15 bg-trackify-surface2 px-4 py-3 text-sm text-trackify-text">
               {error}
             </div>
           ) : null}
@@ -97,4 +97,3 @@ export default function Login() {
     </Card>
   );
 }
-

@@ -131,7 +131,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
         {kpis.map((kpi) => {
           const value =
             kpi.label === "Total Shifts"
@@ -148,7 +148,7 @@ export default function Dashboard() {
               <CardTitle>{kpi.label}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-semibold text-trackify-text">{value}</div>
+              <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">{value}</div>
               <div className="mt-1 text-sm text-trackify-muted">{kpi.helper}</div>
             </CardContent>
           </Card>
@@ -179,7 +179,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {isMonthLoading ? (
-              <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4 text-sm text-trackify-muted">
+              <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4 text-sm text-trackify-muted">
                 Loading month…
               </div>
             ) : null}
@@ -211,19 +211,19 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-3">
               {dayError ? (
-                <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4 text-sm text-trackify-muted">
+                <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4 text-sm text-trackify-muted">
                   {dayError}
                 </div>
               ) : null}
 
               {isDayLoading ? (
-                <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4 text-sm text-trackify-muted">
+                <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4 text-sm text-trackify-muted">
                   Loading details…
                 </div>
               ) : null}
 
               {!isDayLoading && !dayError && dayEntries.length === 0 ? (
-                <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4">
+                <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
                   <div className="text-sm font-medium text-trackify-text">No shifts for this date</div>
                   <div className="mt-1 text-sm text-trackify-muted">
                     Add a work entry to see it here.
@@ -232,7 +232,7 @@ export default function Dashboard() {
               ) : null}
 
               <div className="overflow-hidden rounded-control border border-trackify-border">
-                <div className="grid grid-cols-[160px_1fr_120px_120px] gap-0 border-b border-trackify-border bg-trackify-bg px-4 py-3 text-xs font-medium text-trackify-muted">
+                <div className="grid grid-cols-[160px_1fr_120px_120px] gap-0 border-b border-trackify-border bg-trackify-surface2 px-4 py-3 text-xs font-medium text-trackify-muted">
                   <div>Time</div>
                   <div>Notes</div>
                   <div className="text-right">Hours</div>

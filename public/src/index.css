@@ -21,7 +21,6 @@
   }
 
   body {
-    background: #0a0a0a;
-    color: #ffffff;
+    @apply bg-trackify-bg text-trackify-text antialiased;
   }
 }

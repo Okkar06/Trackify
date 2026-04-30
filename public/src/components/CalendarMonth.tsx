@@ -115,10 +115,10 @@ export default function CalendarMonth({
               type="button"
               onClick={() => onSelectDate?.(cell.iso)}
               className={cn(
-                "relative flex h-20 flex-col rounded-control border border-trackify-border bg-trackify-bg px-3 py-2 text-left transition-colors",
-                "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-muted focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-surface",
+                "relative flex h-20 flex-col rounded-control border border-trackify-border bg-trackify-surface px-3 py-2 text-left transition-colors",
+                "hover:bg-trackify-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg",
                 !cell.inMonth && "opacity-40",
-                isSelected && "border-trackify-muted bg-white/5",
+                isSelected && "border-trackify-border2 bg-trackify-surface2",
                 isToday && "ring-1 ring-trackify-text/25"
               )}
               aria-current={isToday ? "date" : undefined}
@@ -140,4 +140,3 @@ export default function CalendarMonth({
     </div>
   );
 }
-

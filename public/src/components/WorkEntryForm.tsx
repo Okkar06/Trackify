@@ -35,6 +35,15 @@ const parseTimeToMinutes = (timeStr: string) => {
   return hours * 60 + minutes;
 };
 
+const getShiftMinutes = ({ start, end }: { start: string; end: string }) => {
+  const s = parseTimeToMinutes(start);
+  const e0 = parseTimeToMinutes(end);
+  if (!Number.isFinite(s) || !Number.isFinite(e0)) return null;
+  if (e0 === s) return null;
+  const e = e0 < s ? e0 + 24 * 60 : e0;
+  return e - s;
+};
+
 const formatPrettyDate = (iso: string) => {
   if (!iso) return "";
   const date = new Date(`${iso}T00:00:00Z`);
@@ -90,11 +99,9 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
   const mealAllowance = includeMeal ? 4.5 : 0;
 
   const totalHours = React.useMemo(() => {
-    const s = parseTimeToMinutes(startTime);
-    const e = parseTimeToMinutes(endTime);
-    if (!Number.isFinite(s) || !Number.isFinite(e)) return null;
-    if (e <= s) return null;
-    return (e - s) / 60;
+    const minutes = getShiftMinutes({ start: startTime, end: endTime });
+    if (minutes === null) return null;
+    return minutes / 60;
   }, [startTime, endTime]);
 
   const payableHours = React.useMemo(() => {
@@ -127,7 +134,7 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
     const s = parseTimeToMinutes(startTime);
     const e = parseTimeToMinutes(endTime);
     if (startTime && endTime && (!Number.isFinite(s) || !Number.isFinite(e))) next.time = "Please choose a valid time";
-    else if (startTime && endTime && e <= s) next.time = "End time should be after start time";
+    else if (startTime && endTime && e === s) next.time = "End time cannot be the same as start time";
     if (totalHours !== null && breakTime > totalHours) next.time = "Break time cannot be longer than the shift";
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -139,7 +146,11 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
     const e = endTime ? formatPrettyTime(endTime) : "";
     if (!d && !s && !e) return "";
     const t = s && e ? `${s} - ${e}` : s ? `${s}` : e ? `${e}` : "";
-    return [d, t].filter(Boolean).join(" • ");
+    const startMinutes = parseTimeToMinutes(startTime);
+    const endMinutes = parseTimeToMinutes(endTime);
+    const overnight =
+      Number.isFinite(startMinutes) && Number.isFinite(endMinutes) && endMinutes < startMinutes ? "+1 day" : "";
+    return [d, t, overnight].filter(Boolean).join(" • ");
   }, [date, startTime, endTime]);
 
   const onIncBreak = () => setBreakTime((v) => v + 1);
@@ -164,14 +175,14 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
   };
 
   return (
-    <div className="rounded-[24px] border border-white/10 bg-[#0A0F1A]/70 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_28px_90px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+    <div className="rounded-card border border-trackify-border bg-trackify-surface p-5 shadow-[0_1px_0_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.55)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-lg font-semibold text-white">New work entry</div>
-          <div className="mt-1 text-sm text-white/60">Pick date and times like an app</div>
+          <div className="text-lg font-semibold tracking-tight text-trackify-text">New work entry</div>
+          <div className="mt-1 text-sm text-trackify-muted">Pick date and times like an app</div>
         </div>
         {headerLine ? (
-          <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
+          <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-3 text-sm text-trackify-text">
             {headerLine}
           </div>
         ) : null}
@@ -183,90 +194,90 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
             type="button"
             onClick={() => setOpenDate(true)}
             className={cn(
-              "group flex w-full items-center justify-between rounded-[18px] border bg-white/5 px-4 py-4 text-left transition-all",
-              "border-white/10 hover:border-sky-400/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/40",
-              errors.date ? "border-rose-400/40" : ""
+              "group flex w-full items-center justify-between rounded-control border bg-trackify-surface2 px-4 py-4 text-left transition-colors",
+              "border-trackify-border hover:border-trackify-border2 hover:bg-trackify-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15",
+              errors.date ? "border-white/25" : ""
             )}
           >
             <div>
-              <div className="text-xs text-white/60">Date</div>
-              <div className="mt-1 text-sm font-medium text-white">{date ? formatPrettyDate(date) : "Select date"}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Date</div>
+              <div className="mt-1 text-sm font-medium text-trackify-text">{date ? formatPrettyDate(date) : "Select date"}</div>
             </div>
-            <Calendar className="h-5 w-5 text-white/60 group-hover:text-sky-200" />
+            <Calendar className="h-5 w-5 text-trackify-muted group-hover:text-trackify-text" />
           </button>
 
           <button
             type="button"
             onClick={() => setOpenStart(true)}
             className={cn(
-              "group flex w-full items-center justify-between rounded-[18px] border bg-white/5 px-4 py-4 text-left transition-all",
-              "border-white/10 hover:border-sky-400/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/40",
-              errors.time ? "border-rose-400/40" : ""
+              "group flex w-full items-center justify-between rounded-control border bg-trackify-surface2 px-4 py-4 text-left transition-colors",
+              "border-trackify-border hover:border-trackify-border2 hover:bg-trackify-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15",
+              errors.time ? "border-white/25" : ""
             )}
           >
             <div>
-              <div className="text-xs text-white/60">Start</div>
-              <div className="mt-1 text-sm font-medium text-white">
+              <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Start</div>
+              <div className="mt-1 text-sm font-medium text-trackify-text">
                 {startTime ? formatPrettyTime(startTime) : "Select time"}
               </div>
             </div>
-            <Clock className="h-5 w-5 text-white/60 group-hover:text-sky-200" />
+            <Clock className="h-5 w-5 text-trackify-muted group-hover:text-trackify-text" />
           </button>
 
           <button
             type="button"
             onClick={() => setOpenEnd(true)}
             className={cn(
-              "group flex w-full items-center justify-between rounded-[18px] border bg-white/5 px-4 py-4 text-left transition-all",
-              "border-white/10 hover:border-sky-400/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/40",
-              errors.time ? "border-rose-400/40" : ""
+              "group flex w-full items-center justify-between rounded-control border bg-trackify-surface2 px-4 py-4 text-left transition-colors",
+              "border-trackify-border hover:border-trackify-border2 hover:bg-trackify-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15",
+              errors.time ? "border-white/25" : ""
             )}
           >
             <div>
-              <div className="text-xs text-white/60">End</div>
-              <div className="mt-1 text-sm font-medium text-white">{endTime ? formatPrettyTime(endTime) : "Select time"}</div>
+              <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">End</div>
+              <div className="mt-1 text-sm font-medium text-trackify-text">{endTime ? formatPrettyTime(endTime) : "Select time"}</div>
             </div>
-            <Clock className="h-5 w-5 text-white/60 group-hover:text-sky-200" />
+            <Clock className="h-5 w-5 text-trackify-muted group-hover:text-trackify-text" />
           </button>
         </div>
 
         {(errors.date || errors.time) && (
-          <div className="rounded-[18px] border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          <div className="rounded-control border border-white/15 bg-trackify-surface2 px-4 py-3 text-sm text-trackify-text">
             {(errors.date || errors.time) as string}
           </div>
         )}
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-            <div className="text-xs text-white/60">Break time</div>
+          <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Break time</div>
             <div className="mt-2 flex items-center justify-between">
               <button
                 type="button"
                 onClick={onDecBreak}
-                className="flex h-10 w-10 items-center justify-center rounded-control border border-white/10 bg-white/5 text-white/80 transition-all hover:border-sky-400/30 hover:bg-white/10"
+                className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2"
               >
                 <Minus className="h-4 w-4" />
               </button>
               <div className="text-center">
-                <div className="text-lg font-semibold text-white tabular-nums">{breakTime}</div>
-                <div className="text-xs text-white/60">hours</div>
+                <div className="text-lg font-semibold text-trackify-text tabular-nums">{breakTime}</div>
+                <div className="text-xs text-trackify-muted">hours</div>
               </div>
               <button
                 type="button"
                 onClick={onIncBreak}
-                className="flex h-10 w-10 items-center justify-center rounded-control border border-white/10 bg-white/5 text-white/80 transition-all hover:border-sky-400/30 hover:bg-white/10"
+                className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2"
               >
                 <Plus className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-            <div className="text-xs text-white/60">Pay rate</div>
+          <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Pay rate</div>
             <div className="mt-2 flex items-center justify-between gap-3">
               <div className="flex items-baseline gap-2">
-                <div className="text-lg font-semibold text-white tabular-nums">${payRate.toFixed(2)}</div>
-                <div className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/70">
+                <div className="text-lg font-semibold text-trackify-text tabular-nums">${payRate.toFixed(2)}</div>
+                <div className="rounded-full border border-trackify-border bg-trackify-surface px-2 py-1 text-[11px] text-trackify-muted">
                   {String(payRateOverride || "").trim() ? "Manual" : "Auto"}
                 </div>
               </div>
@@ -278,64 +289,60 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
                   value={payRateOverride}
                   onChange={(e) => setPayRateOverride(e.target.value)}
                   placeholder={String(autoPayRate)}
-                  className="w-24 rounded-control border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/40"
+                  className="h-10 w-24 rounded-control border border-trackify-border bg-trackify-surface px-3 text-sm text-trackify-text placeholder:text-trackify-muted2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg"
                 />
               </div>
             </div>
-            <div className="mt-1 text-xs text-white/50">Public holidays are also 15 (auto)</div>
+            <div className="mt-1 text-xs text-trackify-muted2">Public holidays are also 15 (auto)</div>
           </div>
 
-          <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-            <div className="text-xs text-white/60">Meal allowance</div>
+          <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Meal allowance</div>
             <div className="mt-2 flex items-baseline justify-between">
-              <div className="text-lg font-semibold text-white tabular-nums">{includeMeal ? `$${mealAllowance.toFixed(2)}` : "—"}</div>
-              <div className="text-xs text-white/60">{includeMeal ? "Included" : "No break"}</div>
+              <div className="text-lg font-semibold text-trackify-text tabular-nums">{includeMeal ? `$${mealAllowance.toFixed(2)}` : "—"}</div>
+              <div className="text-xs text-trackify-muted">{includeMeal ? "Included" : "No break"}</div>
             </div>
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-            <div className="text-xs text-white/60">Total hours</div>
-            <div className="mt-2 text-2xl font-semibold text-white tabular-nums">
+          <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Total hours</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-trackify-text tabular-nums">
               {totalHours === null ? "—" : totalHours.toFixed(2)}
             </div>
-            <div className="mt-1 text-xs text-white/50">Calculated from start/end</div>
+            <div className="mt-1 text-xs text-trackify-muted2">Calculated from start/end</div>
           </div>
-          <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-            <div className="text-xs text-white/60">Total pay preview</div>
-            <div className="mt-2 text-2xl font-semibold text-white tabular-nums">
+          <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Total pay preview</div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-trackify-text tabular-nums">
               {totalPayPreview === null ? "—" : `$${totalPayPreview.toFixed(2)}`}
             </div>
-            <div className="mt-1 text-xs text-white/50">Final values are calculated on save</div>
+            <div className="mt-1 text-xs text-trackify-muted2">Final values are calculated on save</div>
           </div>
         </div>
 
-        <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-4">
-          <div className="text-xs text-white/60">Notes (optional)</div>
+        <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+          <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Notes (optional)</div>
           <div className="mt-2">
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add notes for this shift"
-              className="min-h-[92px] bg-transparent text-white placeholder:text-white/40"
+              className="min-h-[92px]"
             />
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
-          <Button
-            type="submit"
-            disabled={isSaving}
-            className="bg-white text-black transition-all hover:bg-white/90 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.35),0_0_24px_rgba(56,189,248,0.25)]"
-          >
+          <Button type="submit" disabled={isSaving}>
             {isSaving ? "Creating…" : "Create Entry"}
           </Button>
-          <Button type="button" variant="secondary" onClick={reset} disabled={isSaving} className="border-white/10">
+          <Button type="button" variant="secondary" onClick={reset} disabled={isSaving}>
             Reset
           </Button>
           {onAddAnother ? (
-            <Button type="button" variant="secondary" onClick={onAddAnother} disabled={isSaving} className="border-white/10">
+            <Button type="button" variant="secondary" onClick={onAddAnother} disabled={isSaving}>
               Add Another Entry
             </Button>
           ) : null}

@@ -99,12 +99,13 @@ const validate = (form: FormState): FieldErrors => {
 
   if (form.start_time && form.end_time) {
     const start = parseTimeToMinutes(form.start_time);
-    const end = parseTimeToMinutes(form.end_time);
+    const end0 = parseTimeToMinutes(form.end_time);
+    const end = Number.isFinite(start) && Number.isFinite(end0) && end0 < start ? end0 + 24 * 60 : end0;
     if (!Number.isFinite(start) || !Number.isFinite(end)) {
       errors.start_time = errors.start_time || "Invalid time";
       errors.end_time = errors.end_time || "Invalid time";
-    } else if (end <= start) {
-      errors.end_time = "End time must be after start time";
+    } else if (end0 === start) {
+      errors.end_time = "End time cannot be the same as start time";
     } else {
       const totalHours = (end - start) / 60;
       const breakHours = Number(form.break_time || 1);
