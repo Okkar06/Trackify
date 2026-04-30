@@ -45,10 +45,7 @@ app.use('/api', apiRoutes);
 const webDistPath = path.resolve(__dirname, '../public/dist');
 if (fs.existsSync(webDistPath)) {
   app.use(express.static(webDistPath));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next();
-    return res.sendFile(path.join(webDistPath, 'index.html'));
-  });
+  app.get(/^\/(?!api).*/, (req, res) => res.sendFile(path.join(webDistPath, 'index.html')));
 }
 
 app.use(notFound);
