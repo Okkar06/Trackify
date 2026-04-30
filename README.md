@@ -56,7 +56,7 @@ Frontend runs on `http://localhost:5173` by default.
 | --- | --- | --- |
 | `NODE_ENV` | Yes | Runtime environment (`development`/`production`) |
 | `PORT` | Yes | API port (default `4000`) |
-| `CORS_ORIGIN` | Yes | Allowed frontend origin (default `http://localhost:5173`) |
+| `CORS_ORIGIN` | No | Allowed frontend origin (default `http://localhost:5173` in dev, `*` in production) |
 | `SUPABASE_URL` | Yes | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Yes | Supabase anon key (used to validate auth tokens) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server-only DB + storage access) |
@@ -88,6 +88,13 @@ Notes:
 
 ## Commands
 
+### Full app (root)
+
+```bash
+npm install
+npm run dev
+```
+
 ### Backend
 
 ```bash
@@ -103,6 +110,23 @@ npm run dev
 ```
 
 ## Deployment
+
+### Render (single service: API + frontend)
+
+This repo can be deployed as a single Render Web Service. The backend serves the built frontend (`public/dist`) in production.
+
+- Root Directory: empty (repo root)
+- Build Command: `npm run render-build`
+- Start Command: `npm start`
+- Health Check Path: `/api/health`
+- Environment variables:
+  - `NODE_ENV=production`
+  - `SUPABASE_URL`
+  - `SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `OPENAI_API_KEY` (only if using AI)
+  - `OPENAI_MODEL` (optional)
+  - `CORS_ORIGIN` (optional; defaults to `*` in production)
 
 ### Frontend (Vercel)
 
