@@ -5,7 +5,7 @@ const asString = (value) => {
 
 const nodeEnv = asString(process.env.NODE_ENV) || 'development';
 const port = Number(process.env.PORT) || 4000;
-const corsOrigin = asString(process.env.CORS_ORIGIN) || (nodeEnv === 'production' ? '*' : 'http://localhost:5173');
+const corsOrigin = asString(process.env.CORS_ORIGIN) || '*';
 
 const supabaseUrl = asString(process.env.SUPABASE_URL);
 const supabaseAnonKey = asString(process.env.SUPABASE_ANON_KEY);
