@@ -11,6 +11,7 @@ import Register from "@/pages/Register";
 import WorkEntry from "@/pages/WorkEntry";
 import { useAuthStore } from "@/stores/authStore";
 import * as React from "react";
+import ServerWakeOverlay from "@/components/ServerWakeOverlay";
 
 export default function App() {
   React.useEffect(() => {
@@ -19,6 +20,7 @@ export default function App() {
 
   return (
     <Router>
+      <ServerWakeOverlay />
       <Routes>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
