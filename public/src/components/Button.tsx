@@ -12,7 +12,7 @@ export default function Button({ className, variant = "primary", ...props }: But
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-control border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex h-11 items-center justify-center gap-2 rounded-control border px-4 text-[15px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg disabled:cursor-not-allowed disabled:opacity-50",
         variant === "primary" &&
           "border-trackify-border bg-trackify-text text-trackify-bg hover:bg-white/90 active:bg-white/80",
         variant === "secondary" &&

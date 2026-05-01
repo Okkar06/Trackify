@@ -71,7 +71,7 @@ export default function DatePickerModal({ open, value, onChange, onClose, title 
       >
         <div className="flex items-center justify-between border-b border-trackify-border px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface2">
+            <div className="flex h-11 w-11 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface2">
               <Calendar className="h-5 w-5 text-trackify-text" />
             </div>
             <div>
@@ -79,7 +79,7 @@ export default function DatePickerModal({ open, value, onChange, onClose, title 
               <div className="mt-1 text-xs text-trackify-muted">Tap a day to apply</div>
             </div>
           </div>
-          <Button variant="secondary" onClick={onClose} type="button" className="h-9">
+          <Button variant="secondary" onClick={onClose} type="button">
             Done
           </Button>
         </div>

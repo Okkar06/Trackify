@@ -8,6 +8,7 @@ import WorkEntryForm from "@/components/WorkEntryForm";
 import WorkEntryDraftCard from "@/components/WorkEntryDraftCard";
 import { fetchWorkSettings } from "@/services/userService";
 import { analyzeWorkImage } from "@/services/aiService";
+import { cn } from "@/utils/cn";
 import {
   createWorkEntry,
   deleteWorkEntry,
@@ -528,7 +529,7 @@ export default function WorkEntry() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
               <div className="h-14 w-14 overflow-hidden rounded-control border border-trackify-border bg-trackify-bg">
                 {aiPreviewUrl ? (
                   <img src={aiPreviewUrl} alt="Schedule" className="h-full w-full object-cover" />
@@ -539,7 +540,9 @@ export default function WorkEntry() {
               <div className="flex-1">
                 <div className="mb-2 text-xs text-trackify-muted">Schedule image (optional)</div>
                 <div className="mb-3">
-                  <div className="mb-2 text-xs text-trackify-muted">Target employee name</div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">
+                    Target employee name
+                  </div>
                   <Input
                     value={aiEmployeeName}
                     onChange={(e) => {
@@ -549,18 +552,19 @@ export default function WorkEntry() {
                     placeholder="Enter employee name exactly as shown"
                   />
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={onSelectAiFile}
-                    className="block w-full text-sm text-trackify-muted file:mr-4 file:rounded-control file:border file:border-trackify-border file:bg-trackify-bg file:px-3 file:py-2 file:text-sm file:text-trackify-text hover:file:bg-white/5"
+                    className="block w-full text-sm text-trackify-muted file:mr-4 file:rounded-control file:border file:border-trackify-border file:bg-trackify-surface file:px-4 file:py-3 file:text-[15px] file:text-trackify-text hover:file:bg-trackify-surface2"
                   />
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={runAi}
                     disabled={!aiFile || aiLoading || !aiEmployeeName.trim() || aiCooldown > 0}
+                    className="w-full sm:w-auto"
                   >
                     {aiLoading ? "Analyzing…" : aiCooldown > 0 ? `Try again in ${aiCooldown}s` : "Analyze"}
                   </Button>
@@ -576,8 +580,8 @@ export default function WorkEntry() {
             ) : null}
 
             {aiExtract ? (
-              <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4">
-                <div className="flex items-start justify-between gap-4">
+              <div className="rounded-control border border-trackify-border bg-trackify-surface px-4 py-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                   <div>
                     <div className="text-sm font-medium text-trackify-text">Extracted roster</div>
                     <div className="mt-1 text-sm text-trackify-muted">
@@ -587,18 +591,135 @@ export default function WorkEntry() {
                       <div className="mt-1 text-xs text-trackify-muted">{aiExtract.summary_notes}</div>
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button type="button" onClick={applyAiToForm} disabled={editingId !== ""}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Button className="w-full sm:w-auto" type="button" onClick={applyAiToForm} disabled={editingId !== ""}>
                       Apply working entries
                     </Button>
-                    <Button type="button" variant="secondary" onClick={() => setAiExtract(null)}>
+                    <Button className="w-full sm:w-auto" type="button" variant="secondary" onClick={() => setAiExtract(null)}>
                       Dismiss
                     </Button>
                   </div>
                 </div>
 
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full border-separate border-spacing-0">
+                <div className="mt-4 space-y-3 md:hidden">
+                  {aiExtract.entries.map((row, idx) => (
+                    <div key={idx} className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-trackify-text">{row.date || "—"}</div>
+                          <div className="mt-1 text-xs text-trackify-muted">{row.day || ""}</div>
+                        </div>
+                        <div className="shrink-0 rounded-full border border-trackify-border bg-trackify-surface px-2 py-1 text-[11px] text-trackify-muted">
+                          {row.status === "no_work" ? "X" : row.status}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Start</div>
+                            <Input
+                              value={row.start_time}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? { ...prev, entries: prev.entries.map((r, i) => (i === idx ? { ...r, start_time: e.target.value } : r)) }
+                                    : prev
+                                )
+                              }
+                              placeholder="HH:MM"
+                            />
+                          </div>
+                          <div>
+                            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">End</div>
+                            <Input
+                              value={row.end_time}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? { ...prev, entries: prev.entries.map((r, i) => (i === idx ? { ...r, end_time: e.target.value } : r)) }
+                                    : prev
+                                )
+                              }
+                              placeholder="HH:MM"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Pay rate</div>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={row.pay_rate}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? { ...prev, entries: prev.entries.map((r, i) => (i === idx ? { ...r, pay_rate: e.target.value } : r)) }
+                                    : prev
+                                )
+                              }
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Hours</div>
+                            <Input
+                              value={row.total_hours}
+                              onChange={(e) =>
+                                setAiExtract((prev) =>
+                                  prev
+                                    ? { ...prev, entries: prev.entries.map((r, i) => (i === idx ? { ...r, total_hours: e.target.value } : r)) }
+                                    : prev
+                                )
+                              }
+                              placeholder="9.0"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Status</div>
+                          <select
+                            value={row.status}
+                            onChange={(e) =>
+                              setAiExtract((prev) =>
+                                prev
+                                  ? { ...prev, entries: prev.entries.map((r, i) => (i === idx ? { ...r, status: e.target.value } : r)) }
+                                  : prev
+                              )
+                            }
+                            className="h-11 w-full rounded-control border border-trackify-border bg-trackify-surface px-3 text-[15px] text-trackify-text"
+                          >
+                            <option value="working">working</option>
+                            <option value="no_work">no_work</option>
+                            <option value="unclear">unclear</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Notes</div>
+                          <Input
+                            value={row.notes}
+                            onChange={(e) =>
+                              setAiExtract((prev) =>
+                                prev
+                                  ? { ...prev, entries: prev.entries.map((r, i) => (i === idx ? { ...r, notes: e.target.value } : r)) }
+                                  : prev
+                              )
+                            }
+                            placeholder="Optional"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[980px] border-separate border-spacing-0">
                     <thead>
                       <tr className="text-left text-xs text-trackify-muted">
                         <th className="border-b border-trackify-border px-3 py-2">Date</th>
@@ -658,7 +779,7 @@ export default function WorkEntry() {
                                     : prev
                                 )
                               }
-                              className="h-10 w-full rounded-control border border-trackify-border bg-trackify-bg px-3 text-sm text-trackify-text"
+                              className="h-11 w-full rounded-control border border-trackify-border bg-trackify-surface px-3 text-[15px] text-trackify-text"
                             >
                               <option value="working">working</option>
                               <option value="no_work">no_work</option>
@@ -786,14 +907,14 @@ export default function WorkEntry() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-medium text-trackify-text">Work entry</div>
               <div className="mt-1 text-sm text-trackify-muted">
                 Add a shift and Trackify will calculate payable hours and pay
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
               {!editingId ? (
                 <>
                   <Button
@@ -804,6 +925,7 @@ export default function WorkEntry() {
                       setSubmitError("");
                       setErrors({});
                     }}
+                    className="w-full sm:w-auto"
                   >
                     Single
                   </Button>
@@ -814,6 +936,7 @@ export default function WorkEntry() {
                       setEntryMode("multiple");
                       setMultiSubmitError("");
                     }}
+                    className="w-full sm:w-auto"
                   >
                     Multiple
                   </Button>
@@ -850,14 +973,14 @@ export default function WorkEntry() {
                 </div>
               ) : null}
 
-              <div className="flex items-center gap-3">
-                <Button type="button" variant="secondary" onClick={addDraftRow} disabled={isSaving}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                <Button className="w-full sm:w-auto" type="button" variant="secondary" onClick={addDraftRow} disabled={isSaving}>
                   Add another
                 </Button>
-                <Button type="submit" disabled={isSaving}>
+                <Button className="w-full sm:w-auto" type="submit" disabled={isSaving}>
                   Create entries
                 </Button>
-                <Button type="button" variant="secondary" onClick={resetMulti} disabled={isSaving}>
+                <Button className="w-full sm:w-auto" type="button" variant="secondary" onClick={resetMulti} disabled={isSaving}>
                   Reset
                 </Button>
               </div>
@@ -865,7 +988,7 @@ export default function WorkEntry() {
           ) : (
             editingId ? (
               <form onSubmit={onSubmit} className="space-y-5">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
                     <div className="mb-2 text-xs text-trackify-muted">Date</div>
                     <Input
@@ -900,7 +1023,12 @@ export default function WorkEntry() {
                   </div>
                 </div>
 
-                <div className={`grid gap-4 ${Number(form.break_time || 1) > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+                <div
+                  className={cn(
+                    "grid grid-cols-1 gap-4",
+                    Number(form.break_time || 1) > 0 ? "sm:grid-cols-3" : "sm:grid-cols-2"
+                  )}
+                >
                   <div>
                     <div className="mb-2 text-xs text-trackify-muted">Break time (hours)</div>
                     <Input
@@ -956,11 +1084,11 @@ export default function WorkEntry() {
                   </div>
                 ) : null}
 
-                <div className="flex items-center gap-3">
-                  <Button type="submit" disabled={isSaving}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <Button className="w-full sm:w-auto" type="submit" disabled={isSaving}>
                     Update entry
                   </Button>
-                  <Button type="button" variant="secondary" onClick={resetForm} disabled={isSaving}>
+                  <Button className="w-full sm:w-auto" type="button" variant="secondary" onClick={resetForm} disabled={isSaving}>
                     Reset
                   </Button>
                 </div>
@@ -1003,12 +1131,12 @@ export default function WorkEntry() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-medium text-trackify-text">Work entries</div>
               <div className="mt-1 text-sm text-trackify-muted">Calculated values come from the backend</div>
             </div>
-            <Button variant="secondary" type="button" onClick={() => refreshList()} disabled={isListLoading}>
+            <Button className="w-full sm:w-auto" variant="secondary" type="button" onClick={() => refreshList()} disabled={isListLoading}>
               Refresh
             </Button>
           </div>
@@ -1034,38 +1162,76 @@ export default function WorkEntry() {
           ) : null}
 
           {entries.length > 0 ? (
-            <div className="overflow-hidden rounded-control border border-trackify-border">
-              <div className="grid grid-cols-[140px_160px_90px_120px_1fr_160px] gap-0 border-b border-trackify-border bg-trackify-bg px-4 py-3 text-xs font-medium text-trackify-muted">
-                <div>Date</div>
-                <div>Time</div>
-                <div className="text-right">Hours</div>
-                <div className="text-right">Pay</div>
-                <div>Notes</div>
-                <div className="text-right">Actions</div>
+            <>
+              <div className="space-y-3 md:hidden">
+                {entries.map((entry) => (
+                  <div key={entry.id} className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-trackify-text">{entry.date}</div>
+                        <div className="mt-1 text-sm text-trackify-muted">
+                          {entry.start_time && entry.end_time ? `${entry.start_time} — ${entry.end_time}` : "—"}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-sm text-trackify-muted tabular-nums">{entry.total_pay ?? "—"}</div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Hours</div>
+                        <div className="mt-1 text-sm text-trackify-text tabular-nums">{entry.total_hours ?? "—"}</div>
+                      </div>
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Notes</div>
+                        <div className="mt-1 text-sm text-trackify-text">{entry.notes || "—"}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Button className="w-full sm:w-auto" variant="secondary" type="button" onClick={() => startEdit(entry.id)} disabled={isSaving}>
+                        Edit
+                      </Button>
+                      <Button className="w-full sm:w-auto" variant="secondary" type="button" onClick={() => onDelete(entry.id)} disabled={isSaving}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              {entries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="grid grid-cols-[140px_160px_90px_120px_1fr_160px] items-center gap-0 border-b border-trackify-border px-4 py-3 text-sm last:border-b-0"
-                >
-                  <div className="text-trackify-muted">{entry.date}</div>
-                  <div className="text-trackify-text">
-                    {entry.start_time && entry.end_time ? `${entry.start_time} — ${entry.end_time}` : "—"}
+
+              <div className="hidden overflow-x-auto rounded-control border border-trackify-border md:block">
+                <div className="min-w-[820px]">
+                  <div className="grid grid-cols-[140px_160px_90px_120px_1fr_160px] gap-0 border-b border-trackify-border bg-trackify-surface2 px-4 py-3 text-xs font-medium text-trackify-muted">
+                    <div>Date</div>
+                    <div>Time</div>
+                    <div className="text-right">Hours</div>
+                    <div className="text-right">Pay</div>
+                    <div>Notes</div>
+                    <div className="text-right">Actions</div>
                   </div>
-                  <div className="text-right text-trackify-muted">{entry.total_hours ?? "—"}</div>
-                  <div className="text-right text-trackify-muted">{entry.total_pay ?? "—"}</div>
-                  <div className="truncate text-trackify-muted">{entry.notes || "—"}</div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="secondary" type="button" onClick={() => startEdit(entry.id)} disabled={isSaving}>
-                      Edit
-                    </Button>
-                    <Button variant="secondary" type="button" onClick={() => onDelete(entry.id)} disabled={isSaving}>
-                      Delete
-                    </Button>
-                  </div>
+                  {entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="grid grid-cols-[140px_160px_90px_120px_1fr_160px] items-center gap-0 border-b border-trackify-border px-4 py-3 text-sm last:border-b-0"
+                    >
+                      <div className="text-trackify-muted">{entry.date}</div>
+                      <div className="text-trackify-text">
+                        {entry.start_time && entry.end_time ? `${entry.start_time} — ${entry.end_time}` : "—"}
+                      </div>
+                      <div className="text-right text-trackify-muted">{entry.total_hours ?? "—"}</div>
+                      <div className="text-right text-trackify-muted">{entry.total_pay ?? "—"}</div>
+                      <div className="truncate text-trackify-muted">{entry.notes || "—"}</div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="secondary" type="button" onClick={() => startEdit(entry.id)} disabled={isSaving}>
+                          Edit
+                        </Button>
+                        <Button variant="secondary" type="button" onClick={() => onDelete(entry.id)} disabled={isSaving}>
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            </>
           ) : null}
         </CardContent>
       </Card>

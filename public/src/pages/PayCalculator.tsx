@@ -82,11 +82,11 @@ const ModePill = ({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-control border px-3 py-2 text-sm transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-muted focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg",
+        "h-11 rounded-control border px-4 text-[15px] transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg",
         active
           ? "border-trackify-border bg-trackify-text text-trackify-bg"
-          : "border-trackify-border bg-trackify-surface text-trackify-text hover:bg-white/5"
+          : "border-trackify-border bg-trackify-surface text-trackify-text hover:bg-trackify-surface2"
       )}
     >
       {children}
@@ -230,8 +230,8 @@ export default function PayCalculator() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <ModePill active={mode === "monthly"} onClick={() => setMode("monthly")}>
             Monthly
           </ModePill>
@@ -239,14 +239,14 @@ export default function PayCalculator() {
             Yearly
           </ModePill>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={onExport} disabled={isLoading || !totals}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button className="w-full sm:w-auto" variant="secondary" onClick={onExport} disabled={isLoading || !totals}>
             Export CSV
           </Button>
-          <Button variant="secondary" onClick={onExportPdf} disabled={isLoading || !totals}>
+          <Button className="w-full sm:w-auto" variant="secondary" onClick={onExportPdf} disabled={isLoading || !totals}>
             Export PDF
           </Button>
-          <Button variant="secondary" onClick={() => refresh()} disabled={isLoading}>
+          <Button className="w-full sm:w-auto" variant="secondary" onClick={() => refresh()} disabled={isLoading}>
             Refresh
           </Button>
         </div>
@@ -267,21 +267,21 @@ export default function PayCalculator() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className={cn("grid gap-4", mode === "monthly" ? "grid-cols-2" : "grid-cols-1")}>
+          <div className={cn("grid grid-cols-1 gap-4", mode === "monthly" ? "sm:grid-cols-2" : "sm:grid-cols-1")}>
             {mode === "monthly" ? (
               <div>
-                <div className="mb-2 text-xs text-trackify-muted">Start date</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Start date</div>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
             ) : null}
             {mode === "monthly" ? (
               <div>
-                <div className="mb-2 text-xs text-trackify-muted">End date</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">End date</div>
                 <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             ) : (
               <div>
-                <div className="mb-2 text-xs text-trackify-muted">Year</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Year</div>
                 <Input
                   type="number"
                   min={1970}
@@ -295,13 +295,15 @@ export default function PayCalculator() {
         </CardContent>
       </Card>
 
-      <section className="grid grid-cols-4 gap-6">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Total shifts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-trackify-text">{totals?.totalShifts ?? "—"}</div>
+            <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">
+              {totals?.totalShifts ?? "—"}
+            </div>
             <div className="mt-1 text-sm text-trackify-muted">Count</div>
           </CardContent>
         </Card>
@@ -310,7 +312,9 @@ export default function PayCalculator() {
             <CardTitle>Total hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-trackify-text">{totals?.totalHours ?? "—"}</div>
+            <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">
+              {totals?.totalHours ?? "—"}
+            </div>
             <div className="mt-1 text-sm text-trackify-muted">Raw time</div>
           </CardContent>
         </Card>
@@ -319,7 +323,9 @@ export default function PayCalculator() {
             <CardTitle>Payable hours</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-trackify-text">{totals?.totalPayableHours ?? "—"}</div>
+            <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">
+              {totals?.totalPayableHours ?? "—"}
+            </div>
             <div className="mt-1 text-sm text-trackify-muted">After breaks</div>
           </CardContent>
         </Card>
@@ -328,7 +334,9 @@ export default function PayCalculator() {
             <CardTitle>Total pay</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-trackify-text">{totals?.totalPay ?? "—"}</div>
+            <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">
+              {totals?.totalPay ?? "—"}
+            </div>
             <div className="mt-1 text-sm text-trackify-muted">Estimated</div>
           </CardContent>
         </Card>
@@ -354,38 +362,76 @@ export default function PayCalculator() {
         </CardHeader>
         <CardContent>
           {!isLoading && !error && (!breakdown || breakdown.length === 0) ? (
-            <div className="rounded-control border border-trackify-border bg-trackify-bg px-4 py-4">
+            <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
               <div className="text-sm font-medium text-trackify-text">No data</div>
               <div className="mt-1 text-sm text-trackify-muted">Add work entries to see summaries here.</div>
             </div>
           ) : null}
 
           {breakdown && breakdown.length > 0 ? (
-            <div className="overflow-hidden rounded-control border border-trackify-border">
-              <div className="grid grid-cols-[minmax(160px,1fr)_90px_120px_140px_110px_140px] gap-0 border-b border-trackify-border bg-trackify-bg px-4 py-3 text-xs font-medium tabular-nums text-trackify-muted">
-                <div>{mode === "monthly" ? "Date" : "Month"}</div>
-                <div className="text-right">Shifts</div>
-                <div className="text-right">Hours</div>
-                <div className="text-right">Payable</div>
-                <div className="text-right">Rate</div>
-                <div className="text-right">Pay</div>
-              </div>
-              {breakdown.map((row: any) => (
-                <div
-                  key={row.date || row.month}
-                  className="grid grid-cols-[minmax(160px,1fr)_90px_120px_140px_110px_140px] items-center gap-0 border-b border-trackify-border px-4 py-3 text-sm tabular-nums last:border-b-0"
-                >
-                  <div className="text-trackify-text">{row.date || row.month}</div>
-                  <div className="text-right text-trackify-muted">{row.shifts}</div>
-                  <div className="text-right text-trackify-muted">{row.totalHours}</div>
-                  <div className="text-right text-trackify-muted">{row.totalPayableHours}</div>
-                  <div className="text-right text-trackify-muted">
-                    {formatRate(row.totalPay, row.totalPayableHours)}
+            <>
+              <div className="space-y-3 md:hidden">
+                {breakdown.map((row: any) => (
+                  <div
+                    key={row.date || row.month}
+                    className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium text-trackify-text">{row.date || row.month}</div>
+                      <div className="text-sm text-trackify-muted tabular-nums">{row.totalPay}</div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Shifts</div>
+                        <div className="mt-1 text-trackify-text tabular-nums">{row.shifts}</div>
+                      </div>
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Rate</div>
+                        <div className="mt-1 text-trackify-text tabular-nums">
+                          {formatRate(row.totalPay, row.totalPayableHours)}
+                        </div>
+                      </div>
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Hours</div>
+                        <div className="mt-1 text-trackify-text tabular-nums">{row.totalHours}</div>
+                      </div>
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Payable</div>
+                        <div className="mt-1 text-trackify-text tabular-nums">{row.totalPayableHours}</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right text-trackify-muted">{row.totalPay}</div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-control border border-trackify-border md:block">
+                <div className="min-w-[780px]">
+                  <div className="grid grid-cols-[minmax(160px,1fr)_90px_120px_140px_110px_140px] gap-0 border-b border-trackify-border bg-trackify-surface2 px-4 py-3 text-xs font-medium tabular-nums text-trackify-muted">
+                    <div>{mode === "monthly" ? "Date" : "Month"}</div>
+                    <div className="text-right">Shifts</div>
+                    <div className="text-right">Hours</div>
+                    <div className="text-right">Payable</div>
+                    <div className="text-right">Rate</div>
+                    <div className="text-right">Pay</div>
+                  </div>
+                  {breakdown.map((row: any) => (
+                    <div
+                      key={row.date || row.month}
+                      className="grid grid-cols-[minmax(160px,1fr)_90px_120px_140px_110px_140px] items-center gap-0 border-b border-trackify-border px-4 py-3 text-sm tabular-nums last:border-b-0"
+                    >
+                      <div className="text-trackify-text">{row.date || row.month}</div>
+                      <div className="text-right text-trackify-muted">{row.shifts}</div>
+                      <div className="text-right text-trackify-muted">{row.totalHours}</div>
+                      <div className="text-right text-trackify-muted">{row.totalPayableHours}</div>
+                      <div className="text-right text-trackify-muted">
+                        {formatRate(row.totalPay, row.totalPayableHours)}
+                      </div>
+                      <div className="text-right text-trackify-muted">{row.totalPay}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            </>
           ) : null}
         </CardContent>
       </Card>

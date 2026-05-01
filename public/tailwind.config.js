@@ -6,7 +6,11 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "24px",
+      padding: {
+        DEFAULT: "16px",
+        sm: "20px",
+        lg: "24px",
+      },
     },
     extend: {
       colors: {

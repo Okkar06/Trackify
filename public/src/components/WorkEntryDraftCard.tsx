@@ -217,7 +217,7 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
               type="button"
               onClick={() => onChange({ ...value, break_time: String(Math.max(0, breakHours - 1)), meal_allowance: breakHours - 1 > 0 ? "4.5" : "0" })}
               disabled={disabled}
-              className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2 disabled:opacity-50"
+              className="flex h-11 w-11 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2 disabled:opacity-50"
             >
               <Minus className="h-4 w-4" />
             </button>
@@ -229,7 +229,7 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
               type="button"
               onClick={() => onChange({ ...value, break_time: String(breakHours + 1), meal_allowance: "4.5" })}
               disabled={disabled}
-              className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2 disabled:opacity-50"
+              className="flex h-11 w-11 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2 disabled:opacity-50"
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -253,7 +253,7 @@ export default function WorkEntryDraftCard({ index, value, errors, disabled, onC
               onChange={(e) => onChange({ ...value, pay_rate: e.target.value })}
               disabled={disabled}
               placeholder={String(autoRate)}
-              className="h-10 w-24 rounded-control border border-trackify-border bg-trackify-surface px-3 text-sm text-trackify-text placeholder:text-trackify-muted2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg disabled:opacity-50"
+              className="h-11 w-28 rounded-control border border-trackify-border bg-trackify-surface px-3 text-[15px] text-trackify-text placeholder:text-trackify-muted2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg disabled:opacity-50"
             />
           </div>
           <div className="mt-1 text-xs text-trackify-muted2">Leave blank for auto</div>

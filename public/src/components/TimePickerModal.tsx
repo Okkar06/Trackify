@@ -107,7 +107,7 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
       >
         <div className="flex items-center justify-between border-b border-trackify-border px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface2">
+            <div className="flex h-11 w-11 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface2">
               <Clock className="h-5 w-5 text-trackify-text" />
             </div>
             <div>
@@ -116,7 +116,7 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={onClose} type="button" className="h-9">
+            <Button variant="secondary" onClick={onClose} type="button">
               Cancel
             </Button>
             <Button
@@ -125,7 +125,6 @@ export default function TimePickerModal({ open, value, onChange, onClose, title 
                 onClose();
               }}
               type="button"
-              className="h-9"
             >
               Apply
             </Button>

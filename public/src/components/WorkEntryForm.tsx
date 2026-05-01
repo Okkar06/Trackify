@@ -254,7 +254,7 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
               <button
                 type="button"
                 onClick={onDecBreak}
-                className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2"
+                className="flex h-11 w-11 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2"
               >
                 <Minus className="h-4 w-4" />
               </button>
@@ -265,7 +265,7 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
               <button
                 type="button"
                 onClick={onIncBreak}
-                className="flex h-10 w-10 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2"
+                className="flex h-11 w-11 items-center justify-center rounded-control border border-trackify-border bg-trackify-surface text-trackify-text transition-colors hover:bg-trackify-surface2"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -289,7 +289,7 @@ export default function WorkEntryForm({ isSaving, onSubmit, onReset, onAddAnothe
                   value={payRateOverride}
                   onChange={(e) => setPayRateOverride(e.target.value)}
                   placeholder={String(autoPayRate)}
-                  className="h-10 w-24 rounded-control border border-trackify-border bg-trackify-surface px-3 text-sm text-trackify-text placeholder:text-trackify-muted2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg"
+                  className="h-11 w-28 rounded-control border border-trackify-border bg-trackify-surface px-3 text-[15px] text-trackify-text placeholder:text-trackify-muted2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg"
                 />
               </div>
             </div>

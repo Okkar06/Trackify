@@ -231,41 +231,61 @@ export default function Dashboard() {
                 </div>
               ) : null}
 
-              <div className="overflow-hidden rounded-control border border-trackify-border">
-                <div className="grid grid-cols-[160px_1fr_120px_120px] gap-0 border-b border-trackify-border bg-trackify-surface2 px-4 py-3 text-xs font-medium text-trackify-muted">
-                  <div>Time</div>
-                  <div>Notes</div>
-                  <div className="text-right">Hours</div>
-                  <div className="text-right">Pay</div>
-                </div>
-                {dayEntries.length > 0
-                  ? dayEntries.map((entry) => (
+              {dayEntries.length > 0 ? (
+                <>
+                  <div className="space-y-3 sm:hidden">
+                    {dayEntries.map((entry) => (
+                      <div key={entry.id} className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-trackify-text">
+                              {entry.start_time && entry.end_time ? `${entry.start_time} — ${entry.end_time}` : "—"}
+                            </div>
+                            <div className="mt-1 text-sm text-trackify-muted">{entry.notes || "—"}</div>
+                          </div>
+                          <div className="shrink-0 text-right text-sm text-trackify-muted tabular-nums">{entry.total_pay ?? "—"}</div>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-3">
+                          <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Hours</div>
+                            <div className="mt-1 text-sm text-trackify-text tabular-nums">{entry.total_hours ?? "—"}</div>
+                          </div>
+                          <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                            <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Meal</div>
+                            <div className="mt-1 text-sm text-trackify-text tabular-nums">{entry.meal_allowance ?? "—"}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden overflow-hidden rounded-control border border-trackify-border sm:block">
+                    <div className="grid grid-cols-[160px_1fr_120px_120px] gap-0 border-b border-trackify-border bg-trackify-surface2 px-4 py-3 text-xs font-medium text-trackify-muted">
+                      <div>Time</div>
+                      <div>Notes</div>
+                      <div className="text-right">Hours</div>
+                      <div className="text-right">Pay</div>
+                    </div>
+                    {dayEntries.map((entry) => (
                       <div
                         key={entry.id}
                         className="grid grid-cols-[160px_1fr_120px_120px] items-center border-b border-trackify-border px-4 py-3 text-sm last:border-b-0"
                       >
                         <div className="text-trackify-muted">
-                          {entry.start_time && entry.end_time
-                            ? `${entry.start_time} — ${entry.end_time}`
-                            : "—"}
+                          {entry.start_time && entry.end_time ? `${entry.start_time} — ${entry.end_time}` : "—"}
                         </div>
                         <div className="text-trackify-text">{entry.notes || "—"}</div>
-                        <div className="text-right text-trackify-muted">
-                          {entry.total_hours ?? "—"}
-                        </div>
-                        <div className="text-right text-trackify-muted">
-                          {entry.total_pay ?? "—"}
-                        </div>
+                        <div className="text-right text-trackify-muted">{entry.total_hours ?? "—"}</div>
+                        <div className="text-right text-trackify-muted">{entry.total_pay ?? "—"}</div>
                       </div>
-                    ))
-                  : null}
-
-                {!isDayLoading && !dayError && dayEntries.length === 0 ? (
-                  <div className="px-4 py-5 text-sm text-trackify-muted">
-                    No entries
+                    ))}
                   </div>
-                ) : null}
-              </div>
+                </>
+              ) : !isDayLoading && !dayError ? (
+                <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4 text-sm text-trackify-muted">
+                  No entries
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>
