@@ -1,0 +1,440 @@
+import * as React from "react";
+
+import Button from "@/components/Button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/Card";
+import Input from "@/components/Input";
+import { fetchMonthlyPay, fetchYearlyPay } from "@/services/payService";
+import { cn } from "@/utils/cn";
+import { buildCsvWithSummary, downloadCsv } from "@/utils/exportCsv";
+import { exportMonthlyPayPdf, exportYearlyPayPdf } from "@/utils/exportPdf";
+
+type Mode = "monthly" | "yearly";
+
+type Totals = {
+  totalShifts: number;
+  totalHours: number;
+  totalPayableHours: number;
+  totalPay: number;
+};
+
+type MonthlyBreakdownRow = {
+  date: string;
+  shifts: number;
+  totalHours: number;
+  totalPayableHours: number;
+  totalPay: number;
+};
+
+type YearlyBreakdownRow = {
+  month: string;
+  shifts: number;
+  totalHours: number;
+  totalPayableHours: number;
+  totalPay: number;
+};
+
+type MonthlyResponse = {
+  totals: Totals;
+  breakdown: MonthlyBreakdownRow[];
+};
+
+type YearlyResponse = {
+  totals: Totals;
+  breakdown: YearlyBreakdownRow[];
+};
+
+const formatRate = (totalPay: number, totalPayableHours: number) => {
+  const pay = Number(totalPay);
+  const hours = Number(totalPayableHours);
+  if (!Number.isFinite(pay) || !Number.isFinite(hours) || hours <= 0) return "—";
+  return (pay / hours).toFixed(2);
+};
+
+const getDefaultMonthYear = () => {
+  const now = new Date();
+  return { month: now.getMonth() + 1, year: now.getFullYear() };
+};
+
+const formatIsoDate = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const getDefaultDateRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { startDate: formatIsoDate(start), endDate: formatIsoDate(now) };
+};
+
+const ModePill = ({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) => {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "h-11 rounded-control border px-4 text-[15px] transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-trackify-text/15 focus-visible:ring-offset-2 focus-visible:ring-offset-trackify-bg",
+        active
+          ? "border-trackify-border bg-trackify-text text-trackify-bg"
+          : "border-trackify-border bg-trackify-surface text-trackify-text hover:bg-trackify-surface2"
+      )}
+    >
+      {children}
+    </button>
+  );
+};
+
+export default function PayCalculator() {
+  const defaults = React.useMemo(() => getDefaultMonthYear(), []);
+  const dateDefaults = React.useMemo(() => getDefaultDateRange(), []);
+
+  const [mode, setMode] = React.useState<Mode>("monthly");
+  const [year, setYear] = React.useState(defaults.year);
+  const [startDate, setStartDate] = React.useState(dateDefaults.startDate);
+  const [endDate, setEndDate] = React.useState(dateDefaults.endDate);
+
+  const [monthly, setMonthly] = React.useState<MonthlyResponse | null>(null);
+  const [yearly, setYearly] = React.useState<YearlyResponse | null>(null);
+
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string>("");
+
+  const refresh = React.useCallback(() => {
+    const controller = new AbortController();
+    setIsLoading(true);
+    setError("");
+
+    const task =
+      mode === "monthly"
+        ? fetchMonthlyPay({ startDate, endDate, signal: controller.signal }).then((res) => {
+            setMonthly(res);
+          })
+        : fetchYearlyPay({ year, signal: controller.signal }).then((res) => {
+            setYearly(res);
+          });
+
+    task
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setError(err?.response?.data?.error?.message || err?.message || "Failed to load pay summary");
+      })
+      .finally(() => {
+        if (controller.signal.aborted) return;
+        setIsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [mode, year, startDate, endDate]);
+
+  React.useEffect(() => {
+    const cleanup = refresh();
+    return cleanup;
+  }, [refresh]);
+
+  const totals = mode === "monthly" ? monthly?.totals : yearly?.totals;
+  const breakdown = mode === "monthly" ? monthly?.breakdown : yearly?.breakdown;
+
+  const onExport = () => {
+    if (!totals) return;
+
+    if (mode === "monthly") {
+      const rows = (monthly?.breakdown || []).map((r) => ({
+        date: r.date,
+        total_shifts: r.shifts,
+        total_hours: r.totalHours,
+        total_payable_hours: r.totalPayableHours,
+        total_pay: r.totalPay,
+      }));
+
+      const csv = buildCsvWithSummary({
+        summary: [
+          { label: "period", value: `range-${startDate}-to-${endDate}` },
+          { label: "total_shifts", value: totals.totalShifts },
+          { label: "total_hours", value: totals.totalHours },
+          { label: "total_payable_hours", value: totals.totalPayableHours },
+          { label: "total_pay", value: totals.totalPay },
+        ],
+        rows,
+      });
+
+      downloadCsv({ filename: `trackify-pay-${startDate}-to-${endDate}.csv`, csv });
+      return;
+    }
+
+    const rows = (yearly?.breakdown || []).map((r) => ({
+      month: r.month,
+      total_shifts: r.shifts,
+      total_hours: r.totalHours,
+      total_payable_hours: r.totalPayableHours,
+      total_pay: r.totalPay,
+    }));
+
+    const csv = buildCsvWithSummary({
+      summary: [
+        { label: "period", value: `yearly-${year}` },
+        { label: "total_shifts", value: totals.totalShifts },
+        { label: "total_hours", value: totals.totalHours },
+        { label: "total_payable_hours", value: totals.totalPayableHours },
+        { label: "total_pay", value: totals.totalPay },
+      ],
+      rows,
+    });
+
+    downloadCsv({ filename: `trackify-pay-yearly-${year}.csv`, csv });
+  };
+
+  const onExportPdf = () => {
+    if (!totals) return;
+
+    if (mode === "monthly") {
+      exportMonthlyPayPdf({
+        year: Number(startDate.slice(0, 4)) || year,
+        month: Number(startDate.slice(5, 7)) || 1,
+        subtitle: `Range • ${startDate} to ${endDate}`,
+        totals,
+        rows: (monthly?.breakdown || []).map((r) => ({
+          date: r.date,
+          shifts: r.shifts,
+          totalHours: r.totalHours,
+          totalPayableHours: r.totalPayableHours,
+          totalPay: r.totalPay,
+        })),
+        filename: `trackify-pay-${startDate}-to-${endDate}.pdf`,
+      });
+      return;
+    }
+
+    exportYearlyPayPdf({
+      year,
+      totals,
+      rows: (yearly?.breakdown || []).map((r) => ({
+        month: r.month,
+        shifts: r.shifts,
+        totalHours: r.totalHours,
+        totalPayableHours: r.totalPayableHours,
+        totalPay: r.totalPay,
+      })),
+      filename: `trackify-pay-yearly-${year}.pdf`,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <ModePill active={mode === "monthly"} onClick={() => setMode("monthly")}>
+            Monthly
+          </ModePill>
+          <ModePill active={mode === "yearly"} onClick={() => setMode("yearly")}>
+            Yearly
+          </ModePill>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button className="w-full sm:w-auto" variant="secondary" onClick={onExport} disabled={isLoading || !totals}>
+            Export CSV
+          </Button>
+          <Button className="w-full sm:w-auto" variant="secondary" onClick={onExportPdf} disabled={isLoading || !totals}>
+            Export PDF
+          </Button>
+          <Button className="w-full sm:w-auto" variant="secondary" onClick={() => refresh()} disabled={isLoading}>
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-trackify-text">Filters</div>
+              <div className="mt-1 text-sm text-trackify-muted">
+                {mode === "monthly" ? "Pay summary (date range)" : "Yearly pay summary"}
+              </div>
+            </div>
+            <div className="text-sm text-trackify-muted">
+              {mode === "monthly" ? `${startDate} → ${endDate}` : String(year)}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className={cn("grid grid-cols-1 gap-4", mode === "monthly" ? "sm:grid-cols-2" : "sm:grid-cols-1")}>
+            {mode === "monthly" ? (
+              <div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Start date</div>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+            ) : null}
+            {mode === "monthly" ? (
+              <div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">End date</div>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+            ) : (
+              <div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-trackify-muted">Year</div>
+                <Input
+                  type="number"
+                  min={1970}
+                  max={2100}
+                  value={year}
+                  onChange={(e) => setYear(Number(e.target.value || defaults.year))}
+                />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total shifts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">
+              {totals?.totalShifts ?? "—"}
+            </div>
+            <div className="mt-1 text-sm text-trackify-muted">Count</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total hours</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">
+              {totals?.totalHours ?? "—"}
+            </div>
+            <div className="mt-1 text-sm text-trackify-muted">Raw time</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Payable hours</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">
+              {totals?.totalPayableHours ?? "—"}
+            </div>
+            <div className="mt-1 text-sm text-trackify-muted">After breaks</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total pay</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold tracking-tight text-trackify-text tabular-nums">
+              {totals?.totalPay ?? "—"}
+            </div>
+            <div className="mt-1 text-sm text-trackify-muted">Estimated</div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {error ? (
+        <div className="rounded-control border border-trackify-border bg-trackify-surface px-5 py-4 text-sm text-trackify-muted">
+          {error}
+        </div>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-trackify-text">Breakdown</div>
+              <div className="mt-1 text-sm text-trackify-muted">
+                {mode === "monthly" ? "Grouped by date" : "Grouped by month"}
+              </div>
+            </div>
+            <div className="text-sm text-trackify-muted">{isLoading ? "Loading…" : ""}</div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!isLoading && !error && (!breakdown || breakdown.length === 0) ? (
+            <div className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4">
+              <div className="text-sm font-medium text-trackify-text">No data</div>
+              <div className="mt-1 text-sm text-trackify-muted">Add work entries to see summaries here.</div>
+            </div>
+          ) : null}
+
+          {breakdown && breakdown.length > 0 ? (
+            <>
+              <div className="space-y-3 md:hidden">
+                {breakdown.map((row: any) => (
+                  <div
+                    key={row.date || row.month}
+                    className="rounded-control border border-trackify-border bg-trackify-surface2 px-4 py-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium text-trackify-text">{row.date || row.month}</div>
+                      <div className="text-sm text-trackify-muted tabular-nums">{row.totalPay}</div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Shifts</div>
+                        <div className="mt-1 text-trackify-text tabular-nums">{row.shifts}</div>
+                      </div>
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Rate</div>
+                        <div className="mt-1 text-trackify-text tabular-nums">
+                          {formatRate(row.totalPay, row.totalPayableHours)}
+                        </div>
+                      </div>
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Hours</div>
+                        <div className="mt-1 text-trackify-text tabular-nums">{row.totalHours}</div>
+                      </div>
+                      <div className="rounded-control border border-trackify-border bg-trackify-surface px-3 py-3">
+                        <div className="text-xs font-medium uppercase tracking-wide text-trackify-muted">Payable</div>
+                        <div className="mt-1 text-trackify-text tabular-nums">{row.totalPayableHours}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-control border border-trackify-border md:block">
+                <div className="min-w-[780px]">
+                  <div className="grid grid-cols-[minmax(160px,1fr)_90px_120px_140px_110px_140px] gap-0 border-b border-trackify-border bg-trackify-surface2 px-4 py-3 text-xs font-medium tabular-nums text-trackify-muted">
+                    <div>{mode === "monthly" ? "Date" : "Month"}</div>
+                    <div className="text-right">Shifts</div>
+                    <div className="text-right">Hours</div>
+                    <div className="text-right">Payable</div>
+                    <div className="text-right">Rate</div>
+                    <div className="text-right">Pay</div>
+                  </div>
+                  {breakdown.map((row: any) => (
+                    <div
+                      key={row.date || row.month}
+                      className="grid grid-cols-[minmax(160px,1fr)_90px_120px_140px_110px_140px] items-center gap-0 border-b border-trackify-border px-4 py-3 text-sm tabular-nums last:border-b-0"
+                    >
+                      <div className="text-trackify-text">{row.date || row.month}</div>
+                      <div className="text-right text-trackify-muted">{row.shifts}</div>
+                      <div className="text-right text-trackify-muted">{row.totalHours}</div>
+                      <div className="text-right text-trackify-muted">{row.totalPayableHours}</div>
+                      <div className="text-right text-trackify-muted">
+                        {formatRate(row.totalPay, row.totalPayableHours)}
+                      </div>
+                      <div className="text-right text-trackify-muted">{row.totalPay}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : null}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

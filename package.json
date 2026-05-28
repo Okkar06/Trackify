@@ -1,0 +1,16 @@
+{
+  "name": "trackify",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web \"npm --prefix server run dev\" \"npm --prefix public run dev\"",
+    "dev:api": "npm --prefix server run dev",
+    "dev:web": "npm --prefix public run dev",
+    "render-build": "npm ci --prefix server && npm ci --prefix public --include=dev && npm --prefix public run build",
+    "build:web": "npm --prefix public run build",
+    "start": "node server/server.js",
+    "start:api": "npm --prefix server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

@@ -1,0 +1,297 @@
+Build a full-stack web application called **Trackify**, a work tracking and pay calculation app.
+
+## Tech Stack
+
+Use the following stack:
+
+### Frontend ( inside public)
+* Vite
+* React
+* Tailwind CSS
+* JavaScript
+* HTML
+* CSS
+
+### Backend ( inside server) 
+
+* Node.js
+* Express.js
+* MVC architecture
+* Supabase for authentication, storage, and database integration
+* PostgreSQL
+
+## Project Goal
+
+Trackify helps users register an account, log their work shifts, calculate pay, manage work settings, and view work history in a calendar-based dashboard.
+
+## Core Features
+
+### 1. Authentication
+
+Create user authentication system with:
+
+* Register account
+* Login
+* Logout
+* Reset password
+* Protected routes
+
+### 2. User Registration Fields
+
+During registration, include:
+
+* Profile image upload field, but make it optional and allow upload later
+* Full name
+* Email
+* Password
+* Confirm password
+
+Store profile image in Supabase Storage and user details in the database.
+
+### 3. User Profile / Settings Page
+
+Create a settings page where users can:
+
+* Edit profile image
+* Edit full name
+* Edit email
+* Change password
+* Reset password
+* Update pay settings
+* Update break settings
+* Manage account preferences
+* View basic account information
+
+Also include any other necessary settings for a professional work-tracker app.
+
+### 4. Work Entry / Work Hours Page
+
+Create a page where users can input work details such as:
+
+* Work date
+* Start time
+* End time
+* Total work hours
+* Pay rate
+* Weekday pay rate
+* Weekend pay rate
+* Break time
+* Break pay
+* Notes
+
+Requirements:
+
+* Default break time should be 1 hour
+* Break time must be editable later
+* Break pay must be editable later
+* Pay rate should support separate weekday and weekend values
+* Users can edit pay rate settings at any time
+* System should calculate total payable hours after subtracting break time if unpaid
+* System should calculate pay automatically
+
+### 5. AI-Assisted Input
+
+Add an AI feature where users can upload an image related to their work schedule or shift details, and the system uses my ChatGPT API to analyze the image and extract useful work-related information.
+
+Examples:
+
+* Analyze screenshot of schedule
+* Detect date, shift time, or work hours from uploaded image
+* Help prefill work entry form
+
+Requirements:
+
+* User uploads an image
+* Backend sends it to my ChatGPT API
+* Extract relevant information
+* Show extracted data for user confirmation before saving
+* Associate extracted record with the logged-in user
+
+### 6. Home Page Dashboard
+
+Create a homepage dashboard with:
+
+* Monthly calendar view
+* Each date that has work records should show a small indicator or dot
+* When user clicks a specific date, show detailed work record below the calendar
+
+Displayed details should include:
+
+* Shift date
+* Start and end time
+* Work hours
+* Break time
+* Pay earned
+* Notes
+
+Also include summary cards such as:
+
+* Total hours this month
+* Total pay this month
+* Number of shifts this month
+
+### 7. Pay Calculator
+
+Create a pay calculator page with:
+
+* Default view showing this month’s pay summary
+* Option to switch between monthly and yearly calculations
+* Total work hours
+* Total payable hours
+* Total estimated pay
+* Breakdown by weekday and weekend shifts if possible
+
+Also include:
+
+* Export option
+* Export to CSV and PDF if possible
+* Clean summary layout for reports
+
+### 8. Database Design
+
+Design database tables for a professional work tracking app. Include admin users and normal users.
+
+Suggested entities:
+
+* users
+* roles
+* user_profiles
+* work_entries
+* pay_settings
+* break_settings
+* exports
+* ai_uploads
+* password_reset_logs if needed
+
+Requirements:
+
+* Support admin role
+* Support normal user role
+* Admin can manage users and view records if needed
+* Use proper foreign keys and relationships
+* Design schema cleanly for scalability
+
+### 9. Admin Features
+
+Include admin-related database structure and backend support for:
+
+* Admin users
+* Viewing users
+* Managing user accounts
+* Viewing work records
+* Possibly editing or removing problematic entries
+
+Do not overcomplicate the admin panel yet, but prepare the structure properly.
+
+## Backend Requirements
+
+Use MVC structure with:
+
+* models
+* controllers
+* routes
+* middleware
+* services
+* utils
+* config
+
+Suggested backend structure:
+
+* auth routes/controllers
+* user routes/controllers
+* work entry routes/controllers
+* pay calculator routes/controllers
+* AI upload routes/controllers
+* settings routes/controllers
+* admin routes/controllers
+
+Include:
+
+* validation
+* error handling
+* authentication middleware
+* role-based authorization middleware
+* clean REST API design
+
+## Frontend Requirements
+
+Use a clean and modern UI with Tailwind CSS.
+Pages should include:
+
+* Login
+* Register
+* Home dashboard
+* Work entry page
+* Calendar page or dashboard calendar section
+* Pay calculator page
+* Settings page
+* Admin page if needed
+
+## UI / Design Theme
+
+Use a **minimal black-and-white theme** for the entire Trackify app.
+
+Design style requirements:
+
+* Premium and modern SaaS dashboard feel
+* Dark background with white, gray, and subtle border tones
+* Very clean layout with lots of spacing
+* Minimalistic interface, no bright colors
+* Elegant typography with a modern sans-serif font
+* Thin borders, soft shadows, and subtle hover effects
+* Calendar, dashboard cards, forms, tables, and settings page should all follow this monochrome design system
+* Use a professional and focused aesthetic similar to high-end finance or productivity platforms
+* Keep the interface simple, clean, and visually calm
+* Avoid clutter, heavy gradients, or overly playful design elements
+
+Suggested color palette:
+
+* Background: #0A0A0A
+* Secondary background: #141414
+* Card background: #181818
+* Border: #2A2A2A
+* Primary text: #FFFFFF
+* Secondary text: #A1A1A1
+* Muted text: #737373
+
+UI components should have:
+
+* rounded corners
+* subtle borders
+* minimalist buttons
+* clean forms
+* refined navigation bar or sidebar
+* smooth transitions
+* simple calendar indicators
+* elegant dashboard cards
+
+
+## Important Functional Requirements
+
+* User-specific data only
+* Secure authentication
+* Editable pay and break settings
+* Default break time = 1 hour
+* Separate weekday and weekend pay logic
+* Calendar-based work history
+* Monthly and yearly pay summary
+* Export support
+* AI image analysis workflow
+
+## Deliverables I Want First
+
+Start by giving me:
+
+1. A full project folder structure for frontend and backend
+2. Database schema design
+3. Supabase integration plan
+4. Backend MVC architecture plan
+5. API route list
+6. Frontend page/component structure
+7. Step-by-step development plan
+8. Starter code for backend and frontend setup
+
+Make the code beginner-friendly but structured professionally.
+Use clear naming conventions and scalable architecture.
+
+
